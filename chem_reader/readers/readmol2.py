@@ -241,7 +241,7 @@ class Mol2(Mol2Reader):
     def __init__(self, path):
         super().__init__(path)
 
-    def toSmiles(self, isomeric=False):
+    def to_smiles(self, isomeric=False):
         r""" Convert the molecules in the file to SMILES strings
         isomeric (bool): False for cannonical, True for isomeric SMILES.
             Default is False.
@@ -258,9 +258,10 @@ class Mol2(Mol2Reader):
             smiles.append(Chem.MolToSmiles(mol, isomericSmiles=isomeric))
         return smiles
 
-    def toGraphs(self):
+    def to_graphs(self, sparse=False):
         r""" Convert the molecules to graphs that represented by atom features,
         bond types, and adjacency matrices.
+        sparse (bool): if to use sparse format for the adjacency matrix
         """
         # graphs = list()
         # for b in self.blocks:

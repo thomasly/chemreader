@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from ..data_processing.readmol2 import Mol2, Mol2Block
+from ..readers.readmol2 import Mol2, Mol2Block
 
 
 class TestReadingMol2File(unittest.TestCase):

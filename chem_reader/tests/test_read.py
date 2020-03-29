@@ -133,5 +133,18 @@ class TestBlockMissingInformation(unittest.TestCase):
         self.assertIn("does not have charge information", cm.output[0])
 
 
+class TestMol2(TestReadingMol2File):
+
+    def test_mol2_to_smiles(self):
+        can_smiles = self.mol.to_smiles()
+        iso_smiles = self.mol.to_smiles(isomeric=True)
+        self.assertEqual(len(can_smiles), self.mol.n_mols)
+        self.assertEqual(can_smiles[0], r"C[NH+](C)CCNC(=O)c1nonc1N")
+        self.assertEqual(len(iso_smiles), self.mol.n_mols)
+        self.assertEqual(iso_smiles[1],
+                         r"C[NH2+]C[C@@H](O)[C@@H](O)[C@H](O)[C@H](O)CO")
+        self.assertNotEqual(can_smiles[1], iso_smiles[1])
+
+
 if __name__ == "__main__":
     unittest.main()

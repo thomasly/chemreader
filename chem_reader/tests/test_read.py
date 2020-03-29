@@ -1,6 +1,10 @@
 import os
 import unittest
 
+import rdkit
+import numpy as np
+from scipy import sparse as sp
+
 from ..readers import Mol2, Mol2Block
 
 
@@ -55,16 +59,20 @@ class TestReadingMol2File(unittest.TestCase):
         self.assertEqual(self.block.charge_type, "USER_CHARGES")
         self.assertEqual(self.block._charge_type, "USER_CHARGES")
 
+    def test_atom_names(self):
+        self.assertEqual(len(self.block.atom_names), self.block.num_atoms)
+        self.assertEqual(
+            self.block.atom_names[0], "C1")
+        self.assertEqual(
+            self.block.atom_names[-1], "H28")
+        self.assertTrue(hasattr(self.block, "_atom_names"))
+
     def test_coordinates(self):
         self.assertEqual(len(self.block.coordinates), self.block.num_atoms)
         self.assertEqual(
-            self.block.coordinates[0][0], "C1")
+            self.block.coordinates[0], (-0.0178, 1.4648, 0.0101))
         self.assertEqual(
-            self.block.coordinates[0][1], (-0.0178, 1.4648, 0.0101))
-        self.assertEqual(
-            self.block.coordinates[-1][0], "H28")
-        self.assertEqual(
-            self.block.coordinates[-1][1], (-1.3009, 0.3246, 7.4554))
+            self.block.coordinates[-1], (-1.3009, 0.3246, 7.4554))
         self.assertTrue(hasattr(self.block, "_coordinates"))
 
     def test_atom_types(self):
@@ -144,6 +152,60 @@ class TestMol2(TestReadingMol2File):
         self.assertEqual(iso_smiles[1],
                          r"C[NH2+]C[C@@H](O)[C@@H](O)[C@H](O)[C@H](O)CO")
         self.assertNotEqual(can_smiles[1], iso_smiles[1])
+
+    def test_molecular_weights(self):
+        mol_weights = self.mol.get_molecular_weights()
+        self.assertEqual(len(mol_weights), self.mol.n_mols)
+        for mw in mol_weights:
+            self.assertGreater(mw, 0)
+        self.assertEqual(int(mol_weights[0]), 200)
+
+    def test_rdkit_mols(self):
+        rdkit_mols = self.mol.rdkit_mols
+        self.assertEqual(len(rdkit_mols), self.mol.n_mols)
+        self.assertTrue(isinstance(rdkit_mols[0], rdkit.Chem.rdchem.Mol))
+
+    def test_mol2blocks(self):
+        mol2_blocks = self.mol.mol2_blocks
+        self.assertEqual(len(mol2_blocks), self.mol.n_mols)
+        self.assertTrue(isinstance(mol2_blocks[0], Mol2Block))
+
+    def test_get_adjacency_matrices(self):
+        matrices = self.mol.get_adjacency_matrices()
+        self.assertEqual(len(matrices), self.mol.n_mols)
+        self.assertTrue(isinstance(matrices[0], np.ndarray))
+        self.assertEqual(np.sum(matrices[0]),
+                         self.mol.mol2_blocks[0].num_bonds*2)
+        self.assertEqual(matrices[0].shape, (28, 28))
+        sparse_matrices = self.mol.get_adjacency_matrices(sparse=True)
+        self.assertEqual(len(sparse_matrices), self.mol.n_mols)
+        self.assertTrue(sp.issparse(sparse_matrices[0]))
+        self.assertTrue(
+            np.array_equal(sparse_matrices[0].toarray(), matrices[0]))
+
+    def test_atom2int_and_bond2int(self):
+        self.assertEqual(Mol2Block.atom_to_num("C.3"), 0)
+        self.assertEqual(Mol2Block.atom_to_num("Sn"), 51)
+        self.assertEqual(Mol2Block.atom_to_num("Any"), 52)
+        self.assertEqual(Mol2Block.atom_to_num("@#$%"), 52)
+        self.assertEqual(Mol2Block.bond_to_num("1"), 0)
+        self.assertEqual(Mol2Block.bond_to_num("nc"), 7)
+        self.assertEqual(Mol2Block.bond_to_num("Any"), 8)
+        self.assertEqual(Mol2Block.bond_to_num("@#$%"), 8)
+
+    def test_get_atom_features(self):
+        atom_features = self.mol.get_atom_features(numeric=False)
+        self.assertEqual(len(atom_features), self.mol.n_mols)
+        self.assertEqual(len(atom_features[0]), self.block.num_atoms)
+        self.assertEqual(len(atom_features[0][0]), 4)
+        self.assertTrue(isinstance(atom_features[0][0][0], float))
+        self.assertTrue(isinstance(atom_features[0][0][-1], str))
+        numeric_features = self.mol.get_atom_features(numeric=True)
+        self.assertEqual(len(numeric_features), self.mol.n_mols)
+        self.assertEqual(len(numeric_features[0]), self.block.num_atoms)
+        self.assertEqual(len(numeric_features[0][0]), 4)
+        self.assertTrue(isinstance(numeric_features[0][0][0], float))
+        self.assertTrue(isinstance(numeric_features[0][0][-1], int))
 
 
 if __name__ == "__main__":

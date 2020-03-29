@@ -4,6 +4,7 @@ import logging
 from rdkit import Chem
 from rdkit.Chem.Descriptors import ExactMolWt
 import numpy as np
+from scipy import sparse as sp
 
 from ..utils.tools import property_getter
 
@@ -58,6 +59,15 @@ class Mol2Reader:
 
 class Mol2Block:
 
+    _atom_types = "C.3,C.2,C.1,C.ar,C.cat,N.3,N.2,N.1,N.ar,N.am,N.pl3,N.4,"\
+        "O.3,O.2,O.co2,O.spc,O.t3p,S.3,S.2,S.O,S.O2,P.3,F,Cl,Br,I,H,H.spc,"\
+        "H.t3p,LP,Du,Du.C,Hal,Het,Hev,Li,Na,Mg,Al,Si,K,Ca,Cr.th,Cr.oh,Mn,Fe,"\
+        "Co.oh,Cu,Zn,Se,Mo,Sn".split(",")
+    _atom2int = {atom.upper(): idx for idx, atom in enumerate(_atom_types)}
+
+    _bond_types = "1,2,3,am,ar,du,un,nc".split(",")
+    _bond2int = {bond.upper(): idx for idx, bond in enumerate(_bond_types)}
+
     def __init__(self, block):
         r"""
         block (str): a mol2 format string of molecule block starting with
@@ -86,6 +96,14 @@ class Mol2Block:
         # discard the contents without record types
         contents_dict.pop("<TEMP>")
         return contents_dict
+
+    @classmethod
+    def atom_to_num(cls, atom_type):
+        return cls._atom2int.get(atom_type.upper(), len(cls._atom2int))
+
+    @classmethod
+    def bond_to_num(cls, bond_type):
+        return cls._bond2int.get(bond_type.upper(), len(cls._bond2int))
 
     @property
     @property_getter
@@ -177,6 +195,19 @@ class Mol2Block:
 
     @property
     @property_getter
+    def atom_names(self):
+        return self._atom_names
+
+    def _get_atom_names(self):
+        names = list()
+        for atom in self.block["ATOM"]:
+            tokens = atom.split()
+            name = tokens[1]
+            names.append(name)
+        return names
+
+    @property
+    @property_getter
     def coordinates(self):
         return self._coordinates
 
@@ -184,9 +215,8 @@ class Mol2Block:
         coordinates = list()
         for atom in self.block["ATOM"]:
             tokens = atom.split()
-            atom_name = tokens[1]
             coors = tuple(map(float, tokens[2:5]))
-            coordinates.append(tuple([atom_name, coors]))
+            coordinates.append(coors)
         return coordinates
 
     @property
@@ -235,11 +265,48 @@ class Mol2Block:
             bonds.append(b)
         return bonds
 
+    def get_atom_features(self, numeric=False):
+        r""" Get the atom features in the block. The feature contains
+        coordinate and atom type for each atom.
+        numeric (bool): if True, return the atom type as a number.
+        =======================================================================
+        return (list): list of tuples. The first three numbers in the tuples
+            are coordinates and the last string or number is atom type.
+        """
+        features = list()
+        for coor, typ in zip(self.coordinates, self.atom_types):
+            if numeric:
+                typ = self.atom_to_num(typ)
+            features.append((*coor, typ))
+        return features
+
 
 class Mol2(Mol2Reader):
 
     def __init__(self, path):
         super().__init__(path)
+
+    @property
+    @property_getter
+    def rdkit_mols(self):
+        return self._rdkit_mols
+
+    def _get_rdkit_mols(self):
+        mols = list()
+        for block in self.blocks:
+            mols.append(Chem.MolFromMol2Block(block))
+        return mols
+
+    @property
+    @property_getter
+    def mol2_blocks(self):
+        return self._mol2blocks
+
+    def _get_mol2_blocks(self):
+        m2blocks = list()
+        for block in self.blocks:
+            m2blocks.append(Mol2Block(block))
+        return m2blocks
 
     def to_smiles(self, isomeric=False):
         r""" Convert the molecules in the file to SMILES strings
@@ -250,13 +317,64 @@ class Mol2(Mol2Reader):
             list.
         """
         smiles = list()
-        for block in self.blocks:
-            mol = Chem.MolFromMol2Block(block)
+        for mol in self.rdkit_mols:
             if mol is None:
                 smiles.append("")
                 continue
             smiles.append(Chem.MolToSmiles(mol, isomericSmiles=isomeric))
         return smiles
+
+    def get_molecular_weights(self):
+        r""" Calculate the molecular weights
+        return (list): list of molecular weights with the same order in the
+            input file
+        """
+        mw = list()
+        for mol in self.rdkit_mols:
+            mw.append(ExactMolWt(mol))
+        return mw
+
+    def get_adjacency_matrices(self, sparse=False):
+        r""" Get adjacency matrices of the molecules as graphs
+        sparse (bool): if to use sparse format for the matrices
+        =======================================================================
+        return (list): list of adjacency matrices with the same order as in the
+            input file. The representations of the matrices are numpy arrays or
+            numpy sparse matrices if the sparse argument is True.
+        """
+        matrices = list()
+        for block in self.mol2_blocks:
+            matrix = np.zeros((block.num_atoms, block.num_atoms),
+                              dtype=np.int8)
+            for bond in block.bonds:
+                edge = [c - 1 for c in bond["connect"]]
+                matrix[edge, edge[::-1]] = 1
+            if sparse:
+                matrix = sp.csc_matrix(matrix)
+            matrices.append(matrix)
+        return matrices
+
+    def get_atom_features(self, numeric=False):
+        r""" Get atom features (coordinates, atom type)
+        numeric (bool): if True, return the atom types as numbers. The
+            atoms that are able to be converted to consistant numbers are:
+            "C.3,C.2,C.1,C.ar,C.cat,N.3,N.2,N.1,N.ar,N.am,N.pl3,N.4, O.3,O.2,
+            O.co2,O.spc,O.t3p,S.3,S.2,S.O,S.O2,P.3,F,Cl,Br,I,H,H.spc,H.t3p,LP,
+            Du,Du.C,Hal,Het,Hev,Li,Na,Mg,Al,Si,K,Ca,Cr.th,Cr.oh,Mn,Fe,Co.oh,Cu,
+            Zn,Se,Mo,Sn". All other atom types will be treated as ANY, and
+            given a numeric type as 52.
+        =======================================================================
+        return (list): list of atom features in the same order as the input
+            file
+        """
+        atom_features = list()
+        for block in self.mol2_blocks:
+            atom_features.append(block.get_atom_features(numeric=numeric))
+        return atom_features
+
+    def get_bond_features(self, numeric=False):
+        r"""
+        """
 
     def to_graphs(self, sparse=False):
         r""" Convert the molecules to graphs that represented by atom features,

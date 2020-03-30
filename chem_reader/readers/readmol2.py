@@ -73,8 +73,8 @@ class Mol2Block:
         block (str): a mol2 format string of molecule block starting with
             @<TRIPOS>MOLECULE
         """
-        self.rdkit_mol = Chem.MolFromMol2Block(block)
-        self.block = self._parse(block)
+        self.rdkit_mol = Chem.MolFromMol2Block(block, sanitize=False)
+        self.block_str = block
 
     def _parse(self, block):
         r""" Parse the block content and dump the records into a dict
@@ -97,6 +97,14 @@ class Mol2Block:
         # discard the contents without record types
         contents_dict.pop("<TEMP>")
         return contents_dict
+
+    @property
+    @property_getter
+    def block(self):
+        return self._blocks
+
+    def _get_block(self):
+        return self._parse(self.block_str)
 
     @classmethod
     def atom_to_num(cls, atom_type):
@@ -124,7 +132,7 @@ class Mol2Block:
         return self._num_atoms
 
     def _get_num_atoms(self):
-        return int(self.block["MOLECULE"][1].split()[0])
+        return self.rdkit_mol.GetNumAtoms()
 
     @property
     @property_getter
@@ -132,15 +140,7 @@ class Mol2Block:
         return self._num_bonds
 
     def _get_num_bonds(self):
-        try:
-            return int(self.block["MOLECULE"][1].split()[1])
-        except IndexError:  # num_bonds not specified in the file header
-            # Get num_bonds from @<TRIPOS>BOND session
-            if "BOND" in self.block:
-                return len(self.block["BOND"])
-            else:
-                logging.warning("num_bonds information is not "
-                                "available from {}".format(self.name))
+        return self.rdkit_mol.GetNumBonds()
 
     @property
     @property_getter
@@ -200,12 +200,8 @@ class Mol2Block:
         return self._atom_names
 
     def _get_atom_names(self):
-        names = list()
-        for atom in self.block["ATOM"]:
-            tokens = atom.split()
-            name = tokens[1]
-            names.append(name)
-        return names
+        atoms = self.rdkit_mol.GetAtoms()
+        return [atom.GetSymbol() for atom in atoms]
 
     @property
     @property_getter
@@ -213,12 +209,8 @@ class Mol2Block:
         return self._coordinates
 
     def _get_coordinates(self):
-        coordinates = list()
-        for atom in self.block["ATOM"]:
-            tokens = atom.split()
-            coors = tuple(map(float, tokens[2:5]))
-            coordinates.append(coors)
-        return coordinates
+        conformer = self.rdkit_mol.GetConformer()
+        return conformer.GetPositions()
 
     @property
     @property_getter
@@ -309,16 +301,19 @@ class Mol2Block:
         =======================================================================
         return (list): list of bond types.
         """
-        bond_features = list()
-        for bond in self.bonds:
-            typ = bond["type"]
+        features = list()
+        for bond in self.block["BOND"]:
+            type_ = bond.split()[3]
             if numeric:
-                typ = self.bond_to_num(typ)
-            bond_features.append(typ)
-        return bond_features
+                type_ = self.bond_to_num(type_)
+            features.append(type_)
+        return features
 
     def to_smiles(self, isomeric=False):
-        return Chem.MolToSmiles(self.rdkit_mol, isomericSmiles=isomeric)
+        mol = Chem.RemoveHs(self.rdkit_mol)
+        return Chem.MolToSmiles(mol,
+                                isomericSmiles=isomeric,
+                                kekuleSmiles=True)
 
     def to_graph(self, sparse=False):
         graph = dict()

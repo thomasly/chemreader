@@ -61,17 +61,21 @@ class TestReadingMol2File(unittest.TestCase):
     def test_atom_names(self):
         self.assertEqual(len(self.block.atom_names), self.block.num_atoms)
         self.assertEqual(
-            self.block.atom_names[0], "C1")
+            self.block.atom_names[0], "C")
         self.assertEqual(
-            self.block.atom_names[-1], "H28")
+            self.block.atom_names[-1], "H")
         self.assertTrue(hasattr(self.block, "_atom_names"))
 
     def test_coordinates(self):
         self.assertEqual(len(self.block.coordinates), self.block.num_atoms)
-        self.assertEqual(
-            self.block.coordinates[0], (-0.0178, 1.4648, 0.0101))
-        self.assertEqual(
-            self.block.coordinates[-1], (-1.3009, 0.3246, 7.4554))
+        self.assertTrue(
+            np.array_equal(
+                self.block.coordinates[0],
+                np.array((-0.0178, 1.4648, 0.0101))))
+        self.assertTrue(
+            np.array_equal(
+                self.block.coordinates[-1],
+                np.array((-1.3009, 0.3246, 7.4554))))
         self.assertTrue(hasattr(self.block, "_coordinates"))
 
     def test_atom_types(self):
@@ -114,11 +118,6 @@ class TestBlockMissingInformation(unittest.TestCase):
         self.assertEqual(self.block.num_atoms, 28)
         self.assertEqual(self.block._num_atoms, 28)
 
-    # number of bonds is got from BOND record instead of MOLECULE record
-    def test_num_bonds(self):
-        self.assertEqual(self.block.num_bonds, 28)
-        self.assertEqual(self.block._num_bonds, 28)
-
     def test_num_subst(self):
         with self.assertLogs() as cm:
             self.block.num_subst
@@ -146,10 +145,10 @@ class TestMol2(TestReadingMol2File):
         can_smiles = self.mol.to_smiles()
         iso_smiles = self.mol.to_smiles(isomeric=True)
         self.assertEqual(len(can_smiles), self.mol.n_mols)
-        self.assertEqual(can_smiles[0], r"C[NH+](C)CCNC(=O)c1nonc1N")
+        self.assertEqual(can_smiles[0], r"C[NH+](C)CCNC(=O)C1:N:O:N:C:1N")
         self.assertEqual(len(iso_smiles), self.mol.n_mols)
-        self.assertEqual(iso_smiles[1],
-                         r"C[NH2+]C[C@@H](O)[C@@H](O)[C@H](O)[C@H](O)CO")
+        self.assertEqual(iso_smiles[62],
+                         r"CN1:C:N:C:C:1[C@H]([NH3+])C1(O)CNC1")
         self.assertNotEqual(can_smiles[1], iso_smiles[1])
 
     def test_molecular_weights(self):

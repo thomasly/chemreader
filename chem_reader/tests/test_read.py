@@ -1,7 +1,6 @@
 import os
 import unittest
 
-import rdkit
 import numpy as np
 from scipy import sparse as sp
 
@@ -160,11 +159,6 @@ class TestMol2(TestReadingMol2File):
             self.assertGreater(mw, 0)
         self.assertEqual(int(mol_weights[0]), 200)
 
-    def test_rdkit_mols(self):
-        rdkit_mols = self.mol.rdkit_mols
-        self.assertEqual(len(rdkit_mols), self.mol.n_mols)
-        self.assertTrue(isinstance(rdkit_mols[0], rdkit.Chem.rdchem.Mol))
-
     def test_mol2blocks(self):
         mol2_blocks = self.mol.mol2_blocks
         self.assertEqual(len(mol2_blocks), self.mol.n_mols)
@@ -206,6 +200,35 @@ class TestMol2(TestReadingMol2File):
         self.assertEqual(len(numeric_features[0][0]), 4)
         self.assertTrue(isinstance(numeric_features[0][0][0], float))
         self.assertTrue(isinstance(numeric_features[0][0][-1], int))
+
+    def test_get_bond_features(self):
+        bond_features = self.mol.get_bond_features(numeric=False)
+        self.assertEqual(len(bond_features), self.mol.n_mols)
+        self.assertEqual(len(bond_features[0]), self.block.num_bonds)
+        self.assertTrue(isinstance(bond_features[0][0], str))
+        numeric_features = self.mol.get_bond_features(numeric=True)
+        self.assertEqual(len(numeric_features), self.mol.n_mols)
+        self.assertEqual(len(numeric_features[0]), self.block.num_bonds)
+        self.assertTrue(isinstance(numeric_features[0][0], int))
+
+    def test_to_graphs(self):
+        graphs = self.mol.to_graphs(sparse=False)
+        self.assertEqual(len(graphs), self.mol.n_mols)
+        self.assertTrue(isinstance(graphs[0]["adjacency"], np.ndarray))
+        self.assertEqual(np.sum(graphs[0]["adjacency"]),
+                         self.mol.mol2_blocks[0].num_bonds*2)
+        self.assertEqual(graphs[0]["adjacency"].shape, (28, 28))
+        self.assertEqual(len(graphs[0]["atom_features"]), self.block.num_atoms)
+        self.assertEqual(len(graphs[0]["atom_features"][0]), 4)
+        self.assertTrue(isinstance(graphs[0]["atom_features"][0][0], float))
+        self.assertTrue(isinstance(graphs[0]["atom_features"][0][-1], int))
+        self.assertEqual(len(graphs[0]["bond_features"]), self.block.num_bonds)
+        self.assertTrue(isinstance(graphs[0]["bond_features"][0], int))
+        sparse_graphs = self.mol.to_graphs(sparse=True)
+        self.assertEqual(len(sparse_graphs), self.mol.n_mols)
+        self.assertTrue(sp.issparse(sparse_graphs[0]["adjacency"]))
+        self.assertTrue(np.array_equal(sparse_graphs[0]["adjacency"].toarray(),
+                                       graphs[0]["adjacency"]))
 
 
 if __name__ == "__main__":

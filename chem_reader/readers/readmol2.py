@@ -73,6 +73,7 @@ class Mol2Block:
         block (str): a mol2 format string of molecule block starting with
             @<TRIPOS>MOLECULE
         """
+        self.rdkit_mol = Chem.MolFromMol2Block(block)
         self.block = self._parse(block)
 
     def _parse(self, block):
@@ -265,6 +266,28 @@ class Mol2Block:
             bonds.append(b)
         return bonds
 
+    @property
+    @property_getter
+    def molecular_weight(self):
+        return self._molecular_weight
+
+    def _get_molecular_weight(self):
+        return ExactMolWt(self.rdkit_mol)
+
+    def get_adjacency_matrix(self, sparse=False):
+        r""" Get the adjacency matrix of the molecular graph.
+        spase (bool): if True, return the matrix in sparse format
+        =======================================================================
+        return (numpy.array or scipy.sparse.csc_matrix)
+        """
+        matrix = np.zeros((self.num_atoms, self.num_atoms), dtype=np.int8)
+        for bond in self.bonds:
+            edge = [c - 1 for c in bond["connect"]]
+            matrix[edge, edge[::-1]] = 1
+        if sparse:
+            matrix = sp.csc_matrix(matrix)
+        return matrix
+
     def get_atom_features(self, numeric=False):
         r""" Get the atom features in the block. The feature contains
         coordinate and atom type for each atom.
@@ -280,22 +303,35 @@ class Mol2Block:
             features.append((*coor, typ))
         return features
 
+    def get_bond_features(self, numeric=False):
+        r""" Get the bond features/types in the block.
+        numeric (bool): if True, return the bond type as a number.
+        =======================================================================
+        return (list): list of bond types.
+        """
+        bond_features = list()
+        for bond in self.bonds:
+            typ = bond["type"]
+            if numeric:
+                typ = self.bond_to_num(typ)
+            bond_features.append(typ)
+        return bond_features
+
+    def to_smiles(self, isomeric=False):
+        return Chem.MolToSmiles(self.rdkit_mol, isomericSmiles=isomeric)
+
+    def to_graph(self, sparse=False):
+        graph = dict()
+        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse)
+        graph["atom_features"] = self.get_atom_features(numeric=True)
+        graph["bond_features"] = self.get_bond_features(numeric=True)
+        return graph
+
 
 class Mol2(Mol2Reader):
 
     def __init__(self, path):
         super().__init__(path)
-
-    @property
-    @property_getter
-    def rdkit_mols(self):
-        return self._rdkit_mols
-
-    def _get_rdkit_mols(self):
-        mols = list()
-        for block in self.blocks:
-            mols.append(Chem.MolFromMol2Block(block))
-        return mols
 
     @property
     @property_getter
@@ -317,11 +353,8 @@ class Mol2(Mol2Reader):
             list.
         """
         smiles = list()
-        for mol in self.rdkit_mols:
-            if mol is None:
-                smiles.append("")
-                continue
-            smiles.append(Chem.MolToSmiles(mol, isomericSmiles=isomeric))
+        for block in self.mol2_blocks:
+            smiles.append(block.to_smiles(isomeric=isomeric))
         return smiles
 
     def get_molecular_weights(self):
@@ -330,8 +363,8 @@ class Mol2(Mol2Reader):
             input file
         """
         mw = list()
-        for mol in self.rdkit_mols:
-            mw.append(ExactMolWt(mol))
+        for block in self.mol2_blocks:
+            mw.append(block.molecular_weight)
         return mw
 
     def get_adjacency_matrices(self, sparse=False):
@@ -344,14 +377,7 @@ class Mol2(Mol2Reader):
         """
         matrices = list()
         for block in self.mol2_blocks:
-            matrix = np.zeros((block.num_atoms, block.num_atoms),
-                              dtype=np.int8)
-            for bond in block.bonds:
-                edge = [c - 1 for c in bond["connect"]]
-                matrix[edge, edge[::-1]] = 1
-            if sparse:
-                matrix = sp.csc_matrix(matrix)
-            matrices.append(matrix)
+            matrices.append(block.get_adjacency_matrix(sparse=sparse))
         return matrices
 
     def get_atom_features(self, numeric=False):
@@ -361,11 +387,11 @@ class Mol2(Mol2Reader):
             "C.3,C.2,C.1,C.ar,C.cat,N.3,N.2,N.1,N.ar,N.am,N.pl3,N.4, O.3,O.2,
             O.co2,O.spc,O.t3p,S.3,S.2,S.O,S.O2,P.3,F,Cl,Br,I,H,H.spc,H.t3p,LP,
             Du,Du.C,Hal,Het,Hev,Li,Na,Mg,Al,Si,K,Ca,Cr.th,Cr.oh,Mn,Fe,Co.oh,Cu,
-            Zn,Se,Mo,Sn". All other atom types will be treated as ANY, and
+            Zn,Se,Mo,Sn". All other atom types will be treated as ANY and
             given a numeric type as 52.
         =======================================================================
         return (list): list of atom features in the same order as the input
-            file
+            file.
         """
         atom_features = list()
         for block in self.mol2_blocks:
@@ -373,16 +399,25 @@ class Mol2(Mol2Reader):
         return atom_features
 
     def get_bond_features(self, numeric=False):
-        r"""
+        r""" Get bond features/types
+        numeric (bool): if True, returen the bond types as numbers. Convertable
+            bond types are "1,2,3,am,ar,du,un,nc". All other bond types will be
+            treated as ANY and given a numeric type as 8.
+        =======================================================================
+        return (list): list of bond features in the same order as the input
+            file.
         """
+        bond_features = list()
+        for block in self.mol2_blocks:
+            bond_features.append(block.get_bond_features(numeric=numeric))
+        return bond_features
 
     def to_graphs(self, sparse=False):
         r""" Convert the molecules to graphs that represented by atom features,
         bond types, and adjacency matrices.
         sparse (bool): if to use sparse format for the adjacency matrix
         """
-        # graphs = list()
-        # for b in self.blocks:
-        #     graph = dict()
-        #     block = Mol2Block(b)
-        #     block.
+        graphs = list()
+        for block in self.mol2_blocks:
+            graphs.append(block.to_graph(sparse=sparse))
+        return graphs

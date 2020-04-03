@@ -59,11 +59,12 @@ class Mol2Reader:
 
 class Mol2Block:
 
-    _atom_types = "C.3,C.2,C.1,C.ar,C.cat,N.3,N.2,N.1,N.ar,N.am,N.pl3,N.4,"\
-        "O.3,O.2,O.co2,O.spc,O.t3p,S.3,S.2,S.O,S.O2,P.3,F,Cl,Br,I,H,H.spc,"\
-        "H.t3p,LP,Du,Du.C,Hal,Het,Hev,Li,Na,Mg,Al,Si,K,Ca,Cr.th,Cr.oh,Mn,Fe,"\
-        "Co.oh,Cu,Zn,Se,Mo,Sn".split(",")
-    _atom2int = {atom.upper(): idx for idx, atom in enumerate(_atom_types)}
+    _tripos_atom_types = "C.3,C.2,C.1,C.ar,C.cat,N.3,N.2,N.1,N.ar,N.am,N.pl3,"\
+        "N.4,O.3,O.2,O.co2,O.spc,O.t3p,S.3,S.2,S.O,S.O2,P.3,F,Cl,Br,I,H,"\
+        "H.spc,H.t3p,LP,Du,Du.C,Hal,Het,Hev,Li,Na,Mg,Al,Si,K,Ca,Cr.th,Cr.oh,"\
+        "Mn,Fe,Co.oh,Cu,Zn,Se,Mo,Sn".split(",")
+    _atom2int = {atom.upper(): idx for idx,
+                 atom in enumerate(_tripos_atom_types)}
 
     _bond_types = "1,2,3,am,ar,du,un,nc".split(",")
     _bond2int = {bond.upper(): idx for idx, bond in enumerate(_bond_types)}
@@ -101,7 +102,7 @@ class Mol2Block:
     @property
     @property_getter
     def block(self):
-        return self._blocks
+        return self._block
 
     def _get_block(self):
         return self._parse(self.block_str)
@@ -119,7 +120,7 @@ class Mol2Block:
     def mol_name(self):
         r""" Name of the molecule
         """
-        return self._name
+        return self._mol_name
 
     def _get_mol_name(self):
         return self.block["MOLECULE"][0]
@@ -331,7 +332,7 @@ class Mol2(Mol2Reader):
     @property
     @property_getter
     def mol2_blocks(self):
-        return self._mol2blocks
+        return self._mol2_blocks
 
     def _get_mol2_blocks(self):
         m2blocks = list()

@@ -183,8 +183,7 @@ class TestMol2(TestReadingMol2File):
         self.assertEqual(Mol2Block.atom_to_num("@#$%"), 52)
         self.assertEqual(Mol2Block.bond_to_num("1"), 0)
         self.assertEqual(Mol2Block.bond_to_num("nc"), 7)
-        self.assertEqual(Mol2Block.bond_to_num("Any"), 8)
-        self.assertEqual(Mol2Block.bond_to_num("@#$%"), 8)
+        self.assertEqual(Mol2Block.bond_to_num("@#$%"), 7)
 
     def test_get_atom_features(self):
         atom_features = self.mol.get_atom_features(numeric=False)
@@ -228,6 +227,10 @@ class TestMol2(TestReadingMol2File):
         self.assertTrue(sp.issparse(sparse_graphs[0]["adjacency"]))
         self.assertTrue(np.array_equal(sparse_graphs[0]["adjacency"].toarray(),
                                        graphs[0]["adjacency"]))
+        graphs = self.mol.to_graphs(sparse=False, pad_atom=70, pad_bond=80)
+        self.assertEqual(graphs[0]["adjacency"].shape, (70, 70))
+        self.assertEqual(len(graphs[0]["atom_features"]), 70)
+        self.assertEqual(len(graphs[0]["bond_features"]), 80)
 
 
 if __name__ == "__main__":

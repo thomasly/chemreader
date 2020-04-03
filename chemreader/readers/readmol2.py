@@ -66,7 +66,7 @@ class Mol2Block:
     _atom2int = {atom.upper(): idx for idx,
                  atom in enumerate(_tripos_atom_types)}
 
-    _bond_types = "1,2,3,am,ar,du,un,nc".split(",")
+    _bond_types = "1,2,3,am,ar,du,un".split(",")
     _bond2int = {bond.upper(): idx for idx, bond in enumerate(_bond_types)}
 
     def __init__(self, block):
@@ -267,13 +267,16 @@ class Mol2Block:
     def _get_molecular_weight(self):
         return ExactMolWt(self.rdkit_mol)
 
-    def get_adjacency_matrix(self, sparse=False):
+    def get_adjacency_matrix(self, sparse=False, padding=None):
         r""" Get the adjacency matrix of the molecular graph.
         spase (bool): if True, return the matrix in sparse format
         =======================================================================
         return (numpy.array or scipy.sparse.csc_matrix)
         """
-        matrix = np.zeros((self.num_atoms, self.num_atoms), dtype=np.int8)
+        if padding is None:
+            matrix = np.zeros((self.num_atoms, self.num_atoms), dtype=np.int8)
+        else:
+            matrix = np.zeros((padding, padding), dtype=np.int8)
         for bond in self.bonds:
             edge = [c - 1 for c in bond["connect"]]
             matrix[edge, edge[::-1]] = 1
@@ -281,7 +284,7 @@ class Mol2Block:
             matrix = sp.csc_matrix(matrix)
         return matrix
 
-    def get_atom_features(self, numeric=False):
+    def get_atom_features(self, numeric=False, padding=None):
         r""" Get the atom features in the block. The feature contains
         coordinate and atom type for each atom.
         numeric (bool): if True, return the atom type as a number.
@@ -294,9 +297,17 @@ class Mol2Block:
             if numeric:
                 typ = self.atom_to_num(typ)
             features.append((*coor, typ))
+        if padding is not None:
+            if padding - len(features) < 0:
+                raise ValueError(
+                    "Padding number should be larger than the feature number."
+                    "Got {} < {}".format(padding, len(features)))
+            pad = [(0., 0., 0., self.atom_to_num("ANY"))] * \
+                (padding - len(features))
+            features.extend(pad)
         return features
 
-    def get_bond_features(self, numeric=False):
+    def get_bond_features(self, numeric=False, padding=None):
         r""" Get the bond features/types in the block.
         numeric (bool): if True, return the bond type as a number.
         =======================================================================
@@ -308,6 +319,13 @@ class Mol2Block:
             if numeric:
                 type_ = self.bond_to_num(type_)
             features.append(type_)
+        if padding is not None:
+            if padding - len(features) < 0:
+                raise ValueError(
+                    "Padding number should be larger than the feature number."
+                    "Got {} < {}".format(padding, len(features)))
+            pad = [self.bond_to_num("nc")] * (padding - len(features))
+            features.extend(pad)
         return features
 
     def to_smiles(self, isomeric=False):
@@ -316,11 +334,14 @@ class Mol2Block:
                                 isomericSmiles=isomeric,
                                 kekuleSmiles=True)
 
-    def to_graph(self, sparse=False):
+    def to_graph(self, sparse=False, pad_atom=None, pad_bond=None):
         graph = dict()
-        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse)
-        graph["atom_features"] = self.get_atom_features(numeric=True)
-        graph["bond_features"] = self.get_bond_features(numeric=True)
+        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse,
+                                                       padding=pad_atom)
+        graph["atom_features"] = self.get_atom_features(numeric=True,
+                                                        padding=pad_atom)
+        graph["bond_features"] = self.get_bond_features(numeric=True,
+                                                        padding=pad_bond)
         return graph
 
 
@@ -363,7 +384,7 @@ class Mol2(Mol2Reader):
             mw.append(block.molecular_weight)
         return mw
 
-    def get_adjacency_matrices(self, sparse=False):
+    def get_adjacency_matrices(self, sparse=False, padding=None):
         r""" Get adjacency matrices of the molecules as graphs
         sparse (bool): if to use sparse format for the matrices
         =======================================================================
@@ -373,10 +394,11 @@ class Mol2(Mol2Reader):
         """
         matrices = list()
         for block in self.mol2_blocks:
-            matrices.append(block.get_adjacency_matrix(sparse=sparse))
+            matrices.append(block.get_adjacency_matrix(sparse=sparse,
+                                                       padding=padding))
         return matrices
 
-    def get_atom_features(self, numeric=False):
+    def get_atom_features(self, numeric=False, padding=None):
         r""" Get atom features (coordinates, atom type)
         numeric (bool): if True, return the atom types as numbers. The
             atoms that are able to be converted to consistant numbers are:
@@ -391,10 +413,11 @@ class Mol2(Mol2Reader):
         """
         atom_features = list()
         for block in self.mol2_blocks:
-            atom_features.append(block.get_atom_features(numeric=numeric))
+            atom_features.append(block.get_atom_features(numeric=numeric,
+                                                         padding=padding))
         return atom_features
 
-    def get_bond_features(self, numeric=False):
+    def get_bond_features(self, numeric=False, padding=None):
         r""" Get bond features/types
         numeric (bool): if True, returen the bond types as numbers. Convertable
             bond types are "1,2,3,am,ar,du,un,nc". All other bond types will be
@@ -405,15 +428,18 @@ class Mol2(Mol2Reader):
         """
         bond_features = list()
         for block in self.mol2_blocks:
-            bond_features.append(block.get_bond_features(numeric=numeric))
+            bond_features.append(block.get_bond_features(numeric=numeric,
+                                                         padding=padding))
         return bond_features
 
-    def to_graphs(self, sparse=False):
+    def to_graphs(self, sparse=False, pad_atom=None, pad_bond=None):
         r""" Convert the molecules to graphs that represented by atom features,
         bond types, and adjacency matrices.
         sparse (bool): if to use sparse format for the adjacency matrix
         """
         graphs = list()
         for block in self.mol2_blocks:
-            graphs.append(block.to_graph(sparse=sparse))
+            graphs.append(block.to_graph(sparse=sparse,
+                                         pad_atom=pad_atom,
+                                         pad_bond=pad_bond))
         return graphs

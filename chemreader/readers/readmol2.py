@@ -317,7 +317,7 @@ class Mol2Block:
                 raise ValueError(
                     "Padding number should be larger than the feature number."
                     "Got {} < {}".format(padding, len(features)))
-            pad = [(0., 0., 0., self.atom_to_num("ANY"))] * \
+            pad = [(0., 0., 0., self.atom_to_num("ANY"), 0., 0, 0)] * \
                 (padding - len(features))
             features.extend(pad)
         return features

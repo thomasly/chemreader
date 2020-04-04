@@ -285,7 +285,7 @@ class Mol2Block:
             edge = [c - 1 for c in bond["connect"]]
             matrix[edge, edge[::-1]] = 1
         if sparse:
-            matrix = sp.csc_matrix(matrix)
+            matrix = sp.csr_matrix(matrix)
         return matrix
 
     def get_atom_features(self, numeric=False, padding=None):

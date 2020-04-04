@@ -276,6 +276,10 @@ class Mol2Block:
         if padding is None:
             matrix = np.zeros((self.num_atoms, self.num_atoms), dtype=np.int8)
         else:
+            if padding < self.num_atoms:
+                raise ValueError(
+                    "Padding number should be larger than the atoms number."
+                    "Got {} < {}".format(padding, self.num_atoms))
             matrix = np.zeros((padding, padding), dtype=np.int8)
         for bond in self.bonds:
             edge = [c - 1 for c in bond["connect"]]
@@ -298,7 +302,7 @@ class Mol2Block:
                 typ = self.atom_to_num(typ)
             features.append((*coor, typ))
         if padding is not None:
-            if padding - len(features) < 0:
+            if padding < len(features):
                 raise ValueError(
                     "Padding number should be larger than the feature number."
                     "Got {} < {}".format(padding, len(features)))
@@ -320,7 +324,7 @@ class Mol2Block:
                 type_ = self.bond_to_num(type_)
             features.append(type_)
         if padding is not None:
-            if padding - len(features) < 0:
+            if padding < len(features):
                 raise ValueError(
                     "Padding number should be larger than the feature number."
                     "Got {} < {}".format(padding, len(features)))

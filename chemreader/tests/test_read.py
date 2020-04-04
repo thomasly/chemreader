@@ -230,7 +230,9 @@ class TestMol2(TestReadingMol2File):
         graphs = self.mol.to_graphs(sparse=False, pad_atom=70, pad_bond=80)
         self.assertEqual(graphs[0]["adjacency"].shape, (70, 70))
         self.assertEqual(len(graphs[0]["atom_features"]), 70)
+        np.array(graphs[0]["atom_features"])
         self.assertEqual(len(graphs[0]["bond_features"]), 80)
+        np.array(graphs[0]["bond_features"])
         with self.assertRaises(ValueError):
             self.mol.to_graphs(sparse=False, pad_atom=27, pad_bond=80)
         with self.assertRaises(ValueError):

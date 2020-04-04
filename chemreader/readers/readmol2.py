@@ -297,10 +297,21 @@ class Mol2Block:
             are coordinates and the last string or number is atom type.
         """
         features = list()
-        for coor, typ in zip(self.coordinates, self.atom_types):
+        atom_degrees = list()
+        atom_aromatic = list()
+        atom_masses = list()
+        for atom in self.rdkit_mol.GetAtoms():
+            atom_degrees.append(atom.GetDegree())
+            atom_aromatic.append(int(atom.GetIsAromatic()))
+            atom_masses.append(atom.GetMass())
+        for coor, typ, mass, deg, aro in zip(self.coordinates,
+                                             self.atom_types,
+                                             atom_masses,
+                                             atom_degrees,
+                                             atom_aromatic):
             if numeric:
                 typ = self.atom_to_num(typ)
-            features.append((*coor, typ))
+            features.append((*coor, typ, mass, deg, aro))
         if padding is not None:
             if padding < len(features):
                 raise ValueError(

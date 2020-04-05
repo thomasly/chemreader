@@ -23,6 +23,8 @@ class Mol2Reader:
                 except OSError:
                     logging.error("{} is not readble by gzip".format(path))
                     self.file_contents = []
+        else:
+            self.file_contents = []
 
     @property
     def n_mols(self):

@@ -22,12 +22,14 @@ class Mol2Reader:
                     self.file_contents = [l.decode() for l in lines]
                 except OSError:
                     logging.error("{} is not readble by gzip".format(path))
-                    self.file_contents = []
+                    self.file_contents = None
         else:
-            self.file_contents = []
+            self.file_contents = None
 
     @property
     def n_mols(self):
+        if self.file_contents is None:
+            return 0
         try:
             return self._n_mols
         except AttributeError:
@@ -46,6 +48,8 @@ class Mol2Reader:
         r""" Read the blocks in .mol2 file based on @<TRIPOS>MOLECULE label.
         return (list): list of block contents as strings.
         """
+        if self.file_contents is None:
+            return []
         block_starts = [i for i, l in enumerate(self.file_contents)
                         if "@<TRIPOS>MOLECULE" in l]
         if len(block_starts) == 0:

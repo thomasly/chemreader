@@ -370,7 +370,7 @@ class Mol2(Mol2Reader):
         try:
             return self._mol2_blocks
         except AttributeError:
-            self._get_mol2_blocks = self._get_mol2_blocks()
+            self._mol2_blocks = self._get_mol2_blocks()
             return self._mol2_blocks
 
     def _get_mol2_blocks(self):

@@ -366,9 +366,12 @@ class Mol2(Mol2Reader):
         super().__init__(path)
 
     @property
-    @property_getter
     def mol2_blocks(self):
-        return self._mol2_blocks
+        try:
+            return self._mol2_blocks
+        except AttributeError:
+            self._get_mol2_blocks = self._get_mol2_blocks()
+            return self._mol2_blocks
 
     def _get_mol2_blocks(self):
         m2blocks = list()

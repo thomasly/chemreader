@@ -46,6 +46,8 @@ class Mol2Reader:
         """
         block_starts = [i for i, l in enumerate(self.file_contents)
                         if "@<TRIPOS>MOLECULE" in l]
+        if len(block_starts) == 0:
+            return []
         blocks = list()
         i = 0
         while i+1 < len(block_starts):

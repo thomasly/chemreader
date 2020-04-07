@@ -5,6 +5,7 @@ import numpy as np
 from scipy import sparse as sp
 
 from ..readers import Mol2, Mol2Block
+from ..readers import Smiles
 
 
 class TestReadingMol2File(unittest.TestCase):
@@ -237,6 +238,76 @@ class TestMol2(TestReadingMol2File):
             self.mol.to_graphs(sparse=False, pad_atom=27, pad_bond=80)
         with self.assertRaises(ValueError):
             self.mol.to_graphs(sparse=False, pad_atom=70, pad_bond=27)
+
+
+class TestReadingSmiles(unittest.TestCase):
+
+    def setUp(self):
+        # Aspirin
+        self.smiles = "CC(=O)OC1=CC=CC=C1C(=O)O"
+        self.sm = Smiles(self.smiles)
+
+    def test_building_mol(self):
+        self.assertTrue(hasattr(self.sm, "rdkit_mol"))
+        self.assertTrue(hasattr(self.sm, "smiles_str"))
+        self.assertEqual(self.sm.num_atoms, 13)
+        self.assertEqual(self.sm.num_bonds, 13)
+
+    def test_atom_types(self):
+        types = self.sm.atom_types
+        self.assertEqual(len(types), 13)
+        self.assertEqual(types[0], "C.1")
+        self.assertEqual(types[3], "O.2")
+        self.assertEqual(types[1], "C.3")
+
+    def test_bonds(self):
+        bonds = self.sm.bonds
+        self.assertEqual(len(bonds), 13)
+        self.assertEqual(bonds[0]["type"], "1")
+        self.assertEqual(bonds[0]["connect"], (0, 1))
+        self.assertEqual(bonds[4]["type"], "2")
+        self.assertEqual(bonds[4]["connect"], (4, 5))
+
+    def test_atom_featurs(self):
+        feats = self.sm.get_atom_features()
+        self.assertEqual(len(feats), 13)
+        self.assertEqual(feats[0], ('C.1', 12.011, 1, 0))
+        feats = self.sm.get_atom_features(numeric=True)
+        self.assertEqual(len(feats), 13)
+        self.assertEqual(feats[0], (2, 12.011, 1, 0))
+        feats = self.sm.get_atom_features(numeric=True, padding=20)
+        self.assertEqual(len(feats), 20)
+        self.assertEqual(feats[0], (2, 12.011, 1, 0))
+        self.assertEqual(feats[-1], (52, 0, 0, 0))
+        with self.assertRaises(ValueError):
+            self.sm.get_atom_features(padding=12)
+
+    def test_bond_features(self):
+        feats = self.sm.get_bond_features()
+        self.assertEqual(len(feats), 13)
+        self.assertEqual(feats[0], "1")
+        feats = self.sm.get_bond_features(numeric=True)
+        self.assertEqual(len(feats), 13)
+        self.assertEqual(feats[0], 0)
+        feats = self.sm.get_bond_features(numeric=True, padding=15)
+        self.assertEqual(len(feats), 15)
+        self.assertEqual(feats[0], 0)
+        self.assertEqual(feats[-1], 7)
+        with self.assertRaises(ValueError):
+            self.sm.get_bond_features(padding=12)
+
+    def test_graph(self):
+        graph = self.sm.to_graph()
+        self.assertEqual(len(graph), 3)
+        self.assertEqual(graph["adjacency"].shape, (13, 13))
+        self.assertIsInstance(graph["adjacency"], np.ndarray)
+        self.assertEqual(len(graph["atom_features"]), 13)
+        self.assertEqual(len(graph["bond_features"]), 13)
+        graph = self.sm.to_graph(sparse=True, pad_atom=20, pad_bond=15)
+        self.assertIsInstance(graph["adjacency"], sp.csr_matrix)
+        self.assertEqual(graph["adjacency"].shape, (20, 20))
+        self.assertEqual(len(graph["atom_features"]), 20)
+        self.assertEqual(len(graph["bond_features"]), 15)
 
 
 if __name__ == "__main__":

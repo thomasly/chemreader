@@ -135,8 +135,8 @@ class Smiles:
         coordinate and atom type for each atom.
         numeric (bool): if True, return the atom type as a number.
         =======================================================================
-        return (list): list of tuples. The first three numbers in the tuples
-            are coordinates and the last string or number is atom type.
+        return (list): list of tuples. Features are atom type, atom mass, atom
+            degree, and atom aromatic
         """
         features = list()
         atom_degrees = list()

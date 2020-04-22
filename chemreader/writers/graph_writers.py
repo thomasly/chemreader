@@ -21,6 +21,13 @@ class GraphWriter(_BaseWriter):
             out_path (str): Path to write out the graphs.
             prefix (str): Optional. Prefix of the output file names. Default is
                 None.
+
+        Outputs:
+            prefix_A.txt: adjacency matrices
+            prefix_graph_indicator.txt: graph indicator
+            prefix_node_label.txt: node features
+            prefix_edge_attributes.txt: edge features
+            prefix_graph_labels.txt: graph labels if graph_labels is not None
         """
         os.makedirs(out_path, exist_ok=True)
         sep = "" if prefix is None else "_"

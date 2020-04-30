@@ -130,3 +130,23 @@ class TestGraphWriting(TestCase):
             self.assertEqual(int(l), t)
         # remove created files
         shutil.rmtree(outpath)
+
+    def test_prefix_bug_fix(self):
+        smiles = ["CC(=O)OC1=CC=CC=C1C(=O)O",  # Asprin
+                  "CCC(CC)COC(=O)[C@H](C)N[P@](=O)(OC[C@@H]1[C@H]([C@H]"
+                  "([C@](O1)(C#N)C2=CC=C3N2N=CN=C3N)O)O)"
+                  "OC4=CC=CC=C4",  # Remdesivir
+                  ]
+        mols = [Smiles(s) for s in smiles]
+        labels = [1, 0]
+
+        writer = GraphWriter(mols)
+        outpath = "./chemreader/tests/test_graph_writer"
+        writer.write(outpath,
+                     prefix=None,
+                     graph_labels=labels)
+        self.assertTrue(os.path.isfile(os.path.join(outpath, "A.txt")))
+        self.assertTrue(
+            os.path.isfile(os.path.join(outpath, "graph_labels.txt")))
+        # remove created files
+        shutil.rmtree(outpath)

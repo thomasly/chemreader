@@ -30,14 +30,14 @@ class GraphWriter(_BaseWriter):
             prefix_graph_labels.txt: graph labels if graph_labels is not None
         """
         os.makedirs(out_path, exist_ok=True)
-        sep = "" if prefix is None else "_"
-        a = open(os.path.join(out_path, prefix+sep+"A.txt"), "w")
+        prefix = "" if prefix is None else prefix + "_"
+        a = open(os.path.join(out_path, prefix+"A.txt"), "w")
         idc = open(
-            os.path.join(out_path, prefix+sep+"graph_indicator.txt"), "w")
+            os.path.join(out_path, prefix+"graph_indicator.txt"), "w")
         n_label = open(
-            os.path.join(out_path, prefix+sep+"node_labels.txt"), "w")
+            os.path.join(out_path, prefix+"node_labels.txt"), "w")
         edge_attr = open(
-            os.path.join(out_path, prefix+sep+"edge_attributes.txt"), "w")
+            os.path.join(out_path, prefix+"edge_attributes.txt"), "w")
         # initialize variables for graph indicator and nodes indices
         graph_id = 1
         node_starting_index = 0
@@ -72,6 +72,6 @@ class GraphWriter(_BaseWriter):
         # write graph labels
         if graph_labels is not None:
             g_label = open(
-                os.path.join(out_path, prefix+sep+"graph_labels.txt"), "w")
+                os.path.join(out_path, prefix+"graph_labels.txt"), "w")
             g_label.write("\n".join(map(str, graph_labels)))
             g_label.close()

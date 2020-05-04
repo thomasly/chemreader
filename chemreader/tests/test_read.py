@@ -248,7 +248,6 @@ class TestReadingSmiles(unittest.TestCase):
         self.sm = Smiles(self.smiles)
 
     def test_building_mol(self):
-        self.assertTrue(hasattr(self.sm, "rdkit_mol"))
         self.assertTrue(hasattr(self.sm, "smiles_str"))
         self.assertEqual(self.sm.num_atoms, 13)
         self.assertEqual(self.sm.num_bonds, 13)

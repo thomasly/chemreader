@@ -7,8 +7,10 @@ class _BaseReader(metaclass=ABCMeta):
         "N.4,O.3,O.2,O.co2,O.spc,O.t3p,S.3,S.2,S.O,S.O2,P.3,F,Cl,Br,I,H,"\
         "H.spc,H.t3p,LP,Du,Du.C,Hal,Het,Hev,Li,Na,Mg,Al,Si,K,Ca,Cr.th,Cr.oh,"\
         "Mn,Fe,Co.oh,Cu,Zn,Se,Mo,Sn".split(",")
-    _atom2int = {atom.upper(): idx for idx,
-                 atom in enumerate(_tripos_atom_types)}
+    _atom2int = {
+        atom.upper(): idx
+        for idx, atom in enumerate(_tripos_atom_types)
+    }
 
     _bond_types = "1,2,3,am,ar,du,un".split(",")
     _bond2int = {bond.upper(): idx for idx, bond in enumerate(_bond_types)}
@@ -37,27 +39,22 @@ class _BaseReader(metaclass=ABCMeta):
     def num_atoms(self):
         """ Number of atoms
         """
-
     @abstractproperty
     def bonds(self):
         """ Bonds
         """
-
     @abstractproperty
     def rdkit_mol(self):
         """ RDKit Mol object
         """
-
     @abstractproperty
     def atom_types(self):
         """ Atom types
         """
-
     @abstractmethod
     def get_adjacency_matrix(self):
         """ Get the adjacency matrix
         """
-
     def get_atom_features(self, numeric=False, padding=None):
         r""" Get the atom features in the block. The feature contains
         coordinate and atom type for each atom.
@@ -67,27 +64,28 @@ class _BaseReader(metaclass=ABCMeta):
             degree, and atom aromatic
         """
         features = list()
-        atom_degrees = list()
-        atom_aromatic = list()
-        atom_masses = list()
-        for atom in self.rdkit_mol.GetAtoms():
-            atom_degrees.append(atom.GetDegree())
-            atom_aromatic.append(int(atom.GetIsAromatic()))
-            atom_masses.append(atom.GetMass())
-        for typ, mass, deg, aro in zip(self.atom_types,
-                                       atom_masses,
-                                       atom_degrees,
-                                       atom_aromatic):
+        feature = list()
+        for i, atom in enumerate(self.rdkit_mol.GetAtoms()):
+            atom_type = self.atom_types[i]
             if numeric:
-                typ = self.atom_to_num(typ)
-            features.append((typ, mass, deg, aro))
+                atom_type = self.atom_to_num(atom_type)
+            feature.append(atom_type)
+            feature.append(atom.GetDegree())
+            feature.append(atom.GetImplicitValence())
+            feature.append(atom.GetFormalCharge())
+            feature.append(atom.GetNumRadicalElectrons())
+            feature.append(int(atom.GetHybridization()))
+            feature.append(int(atom.GetIsAromatic()))
+            features.append(tuple(feature))
+            feature = list()
         if padding is not None:
             if padding < len(features):
                 raise ValueError(
                     "Padding number should be larger than the feature number."
                     "Got {} < {}".format(padding, len(features)))
-            pad = [(self.atom_to_num("ANY"), 0., 0, 0)] * \
-                (padding - len(features))
+            pad = ([
+                tuple([self.atom_to_num("ANY")] + [0] * (len(features[0]) - 1))
+            ]) * (padding - len(features))
             features.extend(pad)
         return features
 

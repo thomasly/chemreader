@@ -7,6 +7,7 @@ import numpy as np
 from scipy import sparse as sp
 
 from ..utils.tools import property_getter
+from .basereader import _BaseReader
 
 
 class Mol2Reader:
@@ -65,25 +66,22 @@ class Mol2Reader:
         return blocks
 
 
-class Mol2Block:
-
-    _tripos_atom_types = "C.3,C.2,C.1,C.ar,C.cat,N.3,N.2,N.1,N.ar,N.am,N.pl3,"\
-        "N.4,O.3,O.2,O.co2,O.spc,O.t3p,S.3,S.2,S.O,S.O2,P.3,F,Cl,Br,I,H,"\
-        "H.spc,H.t3p,LP,Du,Du.C,Hal,Het,Hev,Li,Na,Mg,Al,Si,K,Ca,Cr.th,Cr.oh,"\
-        "Mn,Fe,Co.oh,Cu,Zn,Se,Mo,Sn".split(",")
-    _atom2int = {atom.upper(): idx for idx,
-                 atom in enumerate(_tripos_atom_types)}
-
-    _bond_types = "1,2,3,am,ar,du,un".split(",")
-    _bond2int = {bond.upper(): idx for idx, bond in enumerate(_bond_types)}
+class Mol2Block(_BaseReader):
 
     def __init__(self, block):
         r"""
         block (str): a mol2 format string of molecule block starting with
             @<TRIPOS>MOLECULE
         """
-        self.rdkit_mol = Chem.MolFromMol2Block(block, sanitize=False)
         self.block_str = block
+
+    @property
+    @property_getter
+    def rdkit_mol(self):
+        return self._rdkit_mol
+
+    def _get_rdkit_mol(self):
+        return Chem.MolFromMol2Block(self.block_str, sanitize=False)
 
     def _parse(self, block):
         r""" Parse the block content and dump the records into a dict
@@ -114,14 +112,6 @@ class Mol2Block:
 
     def _get_block(self):
         return self._parse(self.block_str)
-
-    @classmethod
-    def atom_to_num(cls, atom_type):
-        return cls._atom2int.get(atom_type.upper(), len(cls._atom2int))
-
-    @classmethod
-    def bond_to_num(cls, bond_type):
-        return cls._bond2int.get(bond_type.upper(), len(cls._bond2int))
 
     @property
     @property_getter
@@ -327,27 +317,6 @@ class Mol2Block:
                     "Got {} < {}".format(padding, len(features)))
             pad = [(0., 0., 0., self.atom_to_num("ANY"), 0., 0, 0)] * \
                 (padding - len(features))
-            features.extend(pad)
-        return features
-
-    def get_bond_features(self, numeric=False, padding=None):
-        r""" Get the bond features/types in the block.
-        numeric (bool): if True, return the bond type as a number.
-        =======================================================================
-        return (list): list of bond types.
-        """
-        features = list()
-        for bond in self.block["BOND"]:
-            type_ = bond.split()[3]
-            if numeric:
-                type_ = self.bond_to_num(type_)
-            features.append(type_)
-        if padding is not None:
-            if padding < len(features):
-                raise ValueError(
-                    "Padding number should be larger than the feature number."
-                    "Got {} < {}".format(padding, len(features)))
-            pad = [self.bond_to_num("nc")] * (padding - len(features))
             features.extend(pad)
         return features
 

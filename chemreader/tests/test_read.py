@@ -256,19 +256,19 @@ class TestReadingSmiles(unittest.TestCase):
         self.assertEqual(len(bonds), 13)
         self.assertEqual(bonds[0]["type"], "1")
         self.assertEqual(bonds[0]["connect"], (0, 1))
-        self.assertEqual(bonds[4]["type"], "2")
+        self.assertEqual(bonds[4]["type"], "ar")
         self.assertEqual(bonds[4]["connect"], (4, 5))
 
     def test_atom_featurs(self):
         feats = self.sm.get_atom_features()
         self.assertEqual(len(feats), 13)
-        self.assertEqual(feats[0], ('C.1', 1, -1, 0, 0, 0, 0))
+        self.assertEqual(feats[0], ('C.1', 1, 3, 0, 0, 4, 0))
         feats = self.sm.get_atom_features(numeric=True)
         self.assertEqual(len(feats), 13)
-        self.assertEqual(feats[0], (2, 1, -1, 0, 0, 0, 0))
+        self.assertEqual(feats[0], (2, 1, 3, 0, 0, 4, 0))
         feats = self.sm.get_atom_features(numeric=True, padding=20)
         self.assertEqual(len(feats), 20)
-        self.assertEqual(feats[0], (2, 1, -1, 0, 0, 0, 0))
+        self.assertEqual(feats[0], (2, 1, 3, 0, 0, 4, 0))
         self.assertEqual(feats[-1], (52, 0, 0, 0, 0, 0, 0))
         with self.assertRaises(ValueError):
             self.sm.get_atom_features(padding=12)

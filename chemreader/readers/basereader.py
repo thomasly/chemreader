@@ -55,6 +55,7 @@ class _BaseReader(metaclass=ABCMeta):
     def get_adjacency_matrix(self):
         """ Get the adjacency matrix
         """
+
     def get_atom_features(self, numeric=False, padding=None):
         r""" Get the atom features in the block. The feature contains
         coordinate and atom type for each atom.
@@ -64,8 +65,8 @@ class _BaseReader(metaclass=ABCMeta):
             degree, and atom aromatic
         """
         features = list()
-        feature = list()
         for i, atom in enumerate(self.rdkit_mol.GetAtoms()):
+            feature = list()
             atom_type = self.atom_types[i]
             if numeric:
                 atom_type = self.atom_to_num(atom_type)
@@ -77,7 +78,6 @@ class _BaseReader(metaclass=ABCMeta):
             feature.append(int(atom.GetHybridization()))
             feature.append(int(atom.GetIsAromatic()))
             features.append(tuple(feature))
-            feature = list()
         if padding is not None:
             if padding < len(features):
                 raise ValueError(

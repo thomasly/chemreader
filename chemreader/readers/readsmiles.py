@@ -21,7 +21,7 @@ class Smiles(_BaseReader):
         return self._rdkit_mol
 
     def _get_rdkit_mol(self):
-        return Chem.MolFromSmiles(self.smiles_str, sanitize=False)
+        return Chem.MolFromSmiles(self.smiles_str, sanitize=True)
 
     @property
     @property_getter

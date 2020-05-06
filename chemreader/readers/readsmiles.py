@@ -9,11 +9,12 @@ from .basereader import _BaseReader
 
 class Smiles(_BaseReader):
 
-    def __init__(self, smiles):
+    def __init__(self, smiles, sanitize=True):
         r"""
         smiles (str): smiles string
         """
         self.smiles_str = smiles
+        self.sanitize = sanitize
 
     @property
     @property_getter
@@ -21,7 +22,7 @@ class Smiles(_BaseReader):
         return self._rdkit_mol
 
     def _get_rdkit_mol(self):
-        return Chem.MolFromSmiles(self.smiles_str, sanitize=True)
+        return Chem.MolFromSmiles(self.smiles_str, sanitize=self.sanitize)
 
     @property
     @property_getter

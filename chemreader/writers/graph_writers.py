@@ -74,4 +74,5 @@ class GraphWriter(_BaseWriter):
             g_label = open(
                 os.path.join(out_path, prefix+"graph_labels.txt"), "w")
             g_label.write("\n".join(map(str, graph_labels)))
+            g_label.write("\n")
             g_label.close()

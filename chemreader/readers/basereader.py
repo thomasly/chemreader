@@ -101,6 +101,8 @@ class _BaseReader(metaclass=ABCMeta):
             if numeric:
                 type_ = self.bond_to_num(type_)
             features.append(type_)
+            # append twice because bonds are undirectional
+            features.append(type_)
         if padding is not None:
             if padding < len(features):
                 raise ValueError(

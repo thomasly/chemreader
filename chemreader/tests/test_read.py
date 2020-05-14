@@ -76,9 +76,9 @@ class TestReadingMol2File(unittest.TestCase):
 
     def test_atom_types(self):
         self.assertEqual(len(self.block.atom_types), self.block.num_atoms)
-        self.assertEqual(self.block.atom_types[0], "C.3")
+        self.assertEqual(self.block.atom_types[0], "C")
         self.assertEqual(self.block.atom_types[-1], "H")
-        self.assertEqual(self.block.atom_types[14], "N.pl3")
+        self.assertEqual(self.block.atom_types[14], "N")
         self.assertTrue(hasattr(self.block, "_atom_types"))
 
     def test_atom_charges(self):
@@ -170,13 +170,12 @@ class TestMol2(TestReadingMol2File):
             np.array_equal(sparse_matrices[0].toarray(), matrices[0]))
 
     def test_atom2int_and_bond2int(self):
-        self.assertEqual(Mol2Block.atom_to_num("C.3"), 0)
-        self.assertEqual(Mol2Block.atom_to_num("Sn"), 51)
-        self.assertEqual(Mol2Block.atom_to_num("Any"), 52)
-        self.assertEqual(Mol2Block.atom_to_num("@#$%"), 52)
+        self.assertEqual(Mol2Block.atom_to_num("C"), 0)
+        self.assertEqual(Mol2Block.atom_to_num("Any"), 22)
+        self.assertEqual(Mol2Block.atom_to_num("@#$%"), 22)
         self.assertEqual(Mol2Block.bond_to_num("1"), 0)
-        self.assertEqual(Mol2Block.bond_to_num("nc"), 7)
-        self.assertEqual(Mol2Block.bond_to_num("@#$%"), 7)
+        self.assertEqual(Mol2Block.bond_to_num("nc"), 6)
+        self.assertEqual(Mol2Block.bond_to_num("@#$%"), 6)
 
     def test_get_atom_features(self):
         atom_features = self.mol.get_atom_features(numeric=False)
@@ -247,9 +246,9 @@ class TestReadingSmiles(unittest.TestCase):
     def test_atom_types(self):
         types = self.sm.atom_types
         self.assertEqual(len(types), 13)
-        self.assertEqual(types[0], "C.1")
-        self.assertEqual(types[3], "O.2")
-        self.assertEqual(types[1], "C.3")
+        self.assertEqual(types[0], "C")
+        self.assertEqual(types[3], "O")
+        self.assertEqual(types[1], "C")
 
     def test_bonds(self):
         bonds = self.sm.bonds
@@ -262,14 +261,15 @@ class TestReadingSmiles(unittest.TestCase):
     def test_atom_featurs(self):
         feats = self.sm.get_atom_features()
         self.assertEqual(len(feats), 13)
-        self.assertEqual(feats[0], ('C.1', 1, 3, 0, 0, 4, 0))
+        self.assertEqual(feats[0], ('C', 1, 0, 4, 0, 0))
+        self.assertEqual(feats[4], ('C', 3, 0, 3, 1, 0))
         feats = self.sm.get_atom_features(numeric=True)
         self.assertEqual(len(feats), 13)
-        self.assertEqual(feats[0], (2, 1, 3, 0, 0, 4, 0))
+        self.assertEqual(feats[0], (0, 1, 0, 4, 0, 0))
         feats = self.sm.get_atom_features(numeric=True, padding=20)
         self.assertEqual(len(feats), 20)
-        self.assertEqual(feats[0], (2, 1, 3, 0, 0, 4, 0))
-        self.assertEqual(feats[-1], (52, 0, 0, 0, 0, 0, 0))
+        self.assertEqual(feats[0], (0, 1, 0, 4, 0, 0))
+        self.assertEqual(feats[-1], (22, 0, 0, 0, 0, 0))
         with self.assertRaises(ValueError):
             self.sm.get_atom_features(padding=12)
 
@@ -283,7 +283,7 @@ class TestReadingSmiles(unittest.TestCase):
         feats = self.sm.get_bond_features(numeric=True, padding=15)
         self.assertEqual(len(feats), 15)
         self.assertEqual(feats[0], 0)
-        self.assertEqual(feats[-1], 7)
+        self.assertEqual(feats[-1], 6)
         with self.assertRaises(ValueError):
             self.sm.get_bond_features(padding=12)
 

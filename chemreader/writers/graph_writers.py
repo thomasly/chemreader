@@ -35,7 +35,7 @@ class GraphWriter(_BaseWriter):
         idc = open(
             os.path.join(out_path, prefix+"graph_indicator.txt"), "w")
         n_label = open(
-            os.path.join(out_path, prefix+"node_labels.txt"), "w")
+            os.path.join(out_path, prefix+"node_attributes.txt"), "w")
         edge_attr = open(
             os.path.join(out_path, prefix+"edge_attributes.txt"), "w")
         # initialize variables for graph indicator and nodes indices

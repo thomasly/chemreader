@@ -35,7 +35,7 @@ class TestGraphWriting(TestCase):
         self.assertTrue(os.path.isfile(
             os.path.join(self.outpath, "test_graph_indicator.txt")))
         self.assertTrue(os.path.isfile(
-            os.path.join(self.outpath, "test_node_labels.txt")))
+            os.path.join(self.outpath, "test_node_attributes.txt")))
         self.assertTrue(os.path.isfile(
             os.path.join(self.outpath, "test_edge_attributes.txt")))
         self.assertTrue(os.path.isfile(
@@ -61,7 +61,7 @@ class TestGraphWriting(TestCase):
             self.assertEqual(lines.count("2\n"), mols[1].num_atoms)
         # assert node labels are correct
         with open(os.path.join(
-                self.outpath, "test_node_labels.txt"), "r") as f:
+                self.outpath, "test_node_attributes.txt"), "r") as f:
             lines = f.readlines()
         true_feats = list()
         for mol in mols:
@@ -100,7 +100,7 @@ class TestGraphWriting(TestCase):
         self.assertTrue(os.path.isfile(
             os.path.join(self.outpath, "test_graph_indicator.txt")))
         self.assertTrue(os.path.isfile(
-            os.path.join(self.outpath, "test_node_labels.txt")))
+            os.path.join(self.outpath, "test_node_attributes.txt")))
         self.assertTrue(os.path.isfile(
             os.path.join(self.outpath, "test_edge_attributes.txt")))
         # assert adjacency matrices are correct
@@ -124,7 +124,7 @@ class TestGraphWriting(TestCase):
             self.assertEqual(lines.count("2\n"), mols[1].num_atoms)
         # assert node labels are correct
         with open(os.path.join(
-                self.outpath, "test_node_labels.txt"), "r") as f:
+                self.outpath, "test_node_attributes.txt"), "r") as f:
             lines = f.readlines()
         true_feats = list()
         for mol in mols:

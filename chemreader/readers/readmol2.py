@@ -219,7 +219,7 @@ class Mol2Block(_BaseReader):
     def _get_atom_types(self):
         atom_types = list()
         for atom in self.block["ATOM"]:
-            type_ = atom.split()[5]
+            type_ = atom.split()[5].split(".")[0].upper()
             atom_types.append(type_)
         return atom_types
 
@@ -397,11 +397,9 @@ class Mol2(Mol2Reader):
         r""" Get atom features (coordinates, atom type)
         numeric (bool): if True, return the atom types as numbers. The
             atoms that are able to be converted to consistant numbers are:
-            "C.3,C.2,C.1,C.ar,C.cat,N.3,N.2,N.1,N.ar,N.am,N.pl3,N.4, O.3,O.2,
-            O.co2,O.spc,O.t3p,S.3,S.2,S.O,S.O2,P.3,F,Cl,Br,I,H,H.spc,H.t3p,LP,
-            Du,Du.C,Hal,Het,Hev,Li,Na,Mg,Al,Si,K,Ca,Cr.th,Cr.oh,Mn,Fe,Co.oh,Cu,
-            Zn,Se,Mo,Sn". All other atom types will be treated as ANY and
-            given a numeric type as 52.
+            C, N, O, S, F, Si, P, Cl, Br, Mg, Na, Ca, Fe, Al, I, B, K, Se, Zn,
+            H, Cu, Mn. All other atom types will be treated as unknown and
+            given a numeric type as 22.
         =======================================================================
         return (list): list of atom features in the same order as the input
             file.

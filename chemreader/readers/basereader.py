@@ -3,25 +3,27 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 class _BaseReader(metaclass=ABCMeta):
 
-    _tripos_atom_types = "C.3,C.2,C.1,C.ar,C.cat,N.3,N.2,N.1,N.ar,N.am,N.pl3,"\
-        "N.4,O.3,O.2,O.co2,O.spc,O.t3p,S.3,S.2,S.O,S.O2,P.3,F,Cl,Br,I,H,"\
-        "H.spc,H.t3p,LP,Du,Du.C,Hal,Het,Hev,Li,Na,Mg,Al,Si,K,Ca,Cr.th,Cr.oh,"\
-        "Mn,Fe,Co.oh,Cu,Zn,Se,Mo,Sn".split(",")
+    # https://github.com/shionhonda/gae-dgl/blob/master/gae_dgl/prepare_data.py
+    _avail_atom_types = [
+        'C', 'N', 'O', 'S', 'F', 'Si', 'P', 'Cl', 'Br', 'Mg', 'Na', 'Ca',
+        'Fe', 'Al', 'I', 'B', 'K', 'Se', 'Zn', 'H', 'Cu', 'Mn', 'unknown'
+    ]
+
     _atom2int = {
         atom.upper(): idx
-        for idx, atom in enumerate(_tripos_atom_types)
+        for idx, atom in enumerate(_avail_atom_types)
     }
 
-    _bond_types = "1,2,3,am,ar,du,un".split(",")
+    _bond_types = ['1', '2', '3', 'am', 'ar', 'du', 'un']
     _bond2int = {bond.upper(): idx for idx, bond in enumerate(_bond_types)}
 
     @classmethod
     def atom_to_num(cls, atom_type):
-        return cls._atom2int.get(atom_type.upper(), len(cls._atom2int))
+        return cls._atom2int.get(atom_type.upper(), cls._atom2int["UNKNOWN"])
 
     @classmethod
     def bond_to_num(cls, bond_type):
-        return cls._bond2int.get(bond_type.upper(), len(cls._bond2int))
+        return cls._bond2int.get(bond_type.upper(), cls._bond2int["UN"])
 
     def one_of_k_encoding(self, x, allowable_set):
         if x not in allowable_set:
@@ -72,11 +74,12 @@ class _BaseReader(metaclass=ABCMeta):
                 atom_type = self.atom_to_num(atom_type)
             feature.append(atom_type)
             feature.append(atom.GetDegree())
-            feature.append(atom.GetImplicitValence())
+            # feature.append(atom.GetImplicitValence())
             feature.append(atom.GetFormalCharge())
-            feature.append(atom.GetNumRadicalElectrons())
+            # feature.append(atom.GetNumRadicalElectrons())
             feature.append(int(atom.GetHybridization()))
             feature.append(int(atom.GetIsAromatic()))
+            feature.append(int(atom.GetChiralTag()))
             features.append(tuple(feature))
         if padding is not None:
             if padding < len(features):
@@ -84,7 +87,8 @@ class _BaseReader(metaclass=ABCMeta):
                     "Padding number should be larger than the feature number."
                     "Got {} < {}".format(padding, len(features)))
             pad = ([
-                tuple([self.atom_to_num("ANY")] + [0] * (len(features[0]) - 1))
+                tuple([self.atom_to_num("unknown")] +
+                      [0] * (len(features[0]) - 1))
             ]) * (padding - len(features))
             features.extend(pad)
         return features
@@ -100,8 +104,6 @@ class _BaseReader(metaclass=ABCMeta):
             type_ = bond["type"]
             if numeric:
                 type_ = self.bond_to_num(type_)
-            features.append(type_)
-            # append twice because bonds are undirectional
             features.append(type_)
         if padding is not None:
             if padding < len(features):

@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="chemreader",
-    version="0.1.1",
+    version="0.2.0",
     author="Yang Liu",
     author_email="thomasliuy@gmail.com",
     description="Read data from typical chemical file formats",

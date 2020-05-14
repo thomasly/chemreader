@@ -60,17 +60,7 @@ class Smiles(_BaseReader):
         atom_types = list()
         for atom in self.rdkit_mol.GetAtoms():
             symbol = atom.GetSymbol().upper()
-            if symbol in ["C", "N"]:
-                if atom.GetIsAromatic():
-                    atom_types.append(symbol+".AR")
-                else:
-                    degree = atom.GetDegree()
-                    atom_types.append(symbol+"."+str(degree))
-            elif symbol in ["O", "P", "S"]:
-                degree = atom.GetDegree()
-                atom_types.append(symbol+"."+str(degree))
-            else:
-                atom_types.append(symbol)
+            atom_types.append(symbol)
         return atom_types
 
     @property

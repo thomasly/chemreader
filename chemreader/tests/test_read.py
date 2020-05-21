@@ -11,8 +11,7 @@ from ..readers import Smiles
 class TestReadingMol2File(unittest.TestCase):
     def setUp(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        test_gzip = os.path.join(dir_path, "testing_resources",
-                                 "AAAARO.xaa.mol2.gz")
+        test_gzip = os.path.join(dir_path, "testing_resources", "AAAARO.xaa.mol2.gz")
         self.mol = Mol2(test_gzip)
         self.blocks = self.mol.blocks
         self.first_block = self.blocks[0]
@@ -67,11 +66,15 @@ class TestReadingMol2File(unittest.TestCase):
     def test_coordinates(self):
         self.assertEqual(len(self.block.coordinates), self.block.num_atoms)
         self.assertTrue(
-            np.array_equal(self.block.coordinates[0],
-                           np.array((-0.0178, 1.4648, 0.0101))))
+            np.array_equal(
+                self.block.coordinates[0], np.array((-0.0178, 1.4648, 0.0101))
+            )
+        )
         self.assertTrue(
-            np.array_equal(self.block.coordinates[-1],
-                           np.array((-1.3009, 0.3246, 7.4554))))
+            np.array_equal(
+                self.block.coordinates[-1], np.array((-1.3009, 0.3246, 7.4554))
+            )
+        )
         self.assertTrue(hasattr(self.block, "_coordinates"))
 
     def test_atom_types(self):
@@ -103,8 +106,9 @@ class TestReadingMol2File(unittest.TestCase):
 class TestBlockMissingInformation(unittest.TestCase):
     def setUp(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        test_f = os.path.join(dir_path, "testing_resources",
-                              "test_mol2_block_missing_info")
+        test_f = os.path.join(
+            dir_path, "testing_resources", "test_mol2_block_missing_info"
+        )
         with open(test_f, "r") as f:
             self.block = Mol2Block(f.read())
 
@@ -140,8 +144,7 @@ class TestMol2(TestReadingMol2File):
         self.assertEqual(len(can_smiles), self.mol.n_mols)
         self.assertEqual(can_smiles[0], r"C[NH+](C)CCNC(=O)C1:N:O:N:C:1N")
         self.assertEqual(len(iso_smiles), self.mol.n_mols)
-        self.assertEqual(iso_smiles[62],
-                         r"CN1:C:N:C:C:1[C@H]([NH3+])C1(O)CNC1")
+        self.assertEqual(iso_smiles[62], r"CN1:C:N:C:C:1[C@H]([NH3+])C1(O)CNC1")
         self.assertNotEqual(can_smiles[1], iso_smiles[1])
 
     def test_molecular_weights(self):
@@ -160,14 +163,12 @@ class TestMol2(TestReadingMol2File):
         matrices = self.mol.get_adjacency_matrices()
         self.assertEqual(len(matrices), self.mol.n_mols)
         self.assertTrue(isinstance(matrices[0], np.ndarray))
-        self.assertEqual(np.sum(matrices[0]),
-                         self.mol.mol2_blocks[0].num_bonds * 2)
+        self.assertEqual(np.sum(matrices[0]), self.mol.mol2_blocks[0].num_bonds * 2)
         self.assertEqual(matrices[0].shape, (28, 28))
         sparse_matrices = self.mol.get_adjacency_matrices(sparse=True)
         self.assertEqual(len(sparse_matrices), self.mol.n_mols)
         self.assertTrue(sp.issparse(sparse_matrices[0]))
-        self.assertTrue(
-            np.array_equal(sparse_matrices[0].toarray(), matrices[0]))
+        self.assertTrue(np.array_equal(sparse_matrices[0].toarray(), matrices[0]))
 
     def test_atom2int_and_bond2int(self):
         self.assertEqual(Mol2Block.atom_to_num("C"), 0)
@@ -205,8 +206,9 @@ class TestMol2(TestReadingMol2File):
         graphs = self.mol.to_graphs(sparse=False)
         self.assertEqual(len(graphs), self.mol.n_mols)
         self.assertTrue(isinstance(graphs[0]["adjacency"], np.ndarray))
-        self.assertEqual(np.sum(graphs[0]["adjacency"]),
-                         self.mol.mol2_blocks[0].num_bonds * 2)
+        self.assertEqual(
+            np.sum(graphs[0]["adjacency"]), self.mol.mol2_blocks[0].num_bonds * 2
+        )
         self.assertEqual(graphs[0]["adjacency"].shape, (28, 28))
         self.assertEqual(len(graphs[0]["atom_features"]), self.block.num_atoms)
         self.assertEqual(len(graphs[0]["atom_features"][0]), 7)
@@ -218,8 +220,10 @@ class TestMol2(TestReadingMol2File):
         self.assertEqual(len(sparse_graphs), self.mol.n_mols)
         self.assertTrue(sp.issparse(sparse_graphs[0]["adjacency"]))
         self.assertTrue(
-            np.array_equal(sparse_graphs[0]["adjacency"].toarray(),
-                           graphs[0]["adjacency"]))
+            np.array_equal(
+                sparse_graphs[0]["adjacency"].toarray(), graphs[0]["adjacency"]
+            )
+        )
         graphs = self.mol.to_graphs(sparse=False, pad_atom=70, pad_bond=80)
         self.assertEqual(graphs[0]["adjacency"].shape, (70, 70))
         self.assertEqual(len(graphs[0]["atom_features"]), 70)
@@ -261,8 +265,8 @@ class TestReadingSmiles(unittest.TestCase):
     def test_atom_featurs(self):
         feats = self.sm.get_atom_features()
         self.assertEqual(len(feats), 13)
-        self.assertEqual(feats[0], ('C', 1, 0, 4, 0, 0))
-        self.assertEqual(feats[4], ('C', 3, 0, 3, 1, 0))
+        self.assertEqual(feats[0], ("C", 1, 0, 4, 0, 0))
+        self.assertEqual(feats[4], ("C", 3, 0, 3, 1, 0))
         feats = self.sm.get_atom_features(numeric=True)
         self.assertEqual(len(feats), 13)
         self.assertEqual(feats[0], (0, 1, 0, 4, 0, 0))
@@ -299,6 +303,13 @@ class TestReadingSmiles(unittest.TestCase):
         self.assertEqual(graph["adjacency"].shape, (20, 20))
         self.assertEqual(len(graph["atom_features"]), 20)
         self.assertEqual(len(graph["bond_features"]), 15)
+
+    def test_fingerprints(self):
+        fp = self.sm.fingerprint
+        self.assertEqual(len(fp), 2048)
+        other = Smiles("C1ccccC1")
+        self.assertFalse(self.sm.similar_to(other))
+        self.assertTrue(self.sm.similar_to(self.sm))
 
 
 if __name__ == "__main__":

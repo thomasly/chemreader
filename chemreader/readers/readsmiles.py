@@ -1,4 +1,5 @@
-from rdkit import Chem
+from rdkit import Chem, DataStructs
+from rdkit.Chem import AllChem
 from rdkit.Chem.Descriptors import ExactMolWt
 import numpy as np
 from scipy import sparse as sp
@@ -8,7 +9,6 @@ from .basereader import _BaseReader
 
 
 class Smiles(_BaseReader):
-
     def __init__(self, smiles, sanitize=True):
         r"""
         smiles (str): smiles string
@@ -65,6 +65,15 @@ class Smiles(_BaseReader):
 
     @property
     @property_getter
+    def fingerprint(self):
+        return self._fingerprint
+
+    def _get_fingerprint(self):
+        fingerprint = AllChem.GetMorganFingerprintAsBitVect(self.rdkit_mol, 2)
+        return fingerprint
+
+    @property
+    @property_getter
     def bonds(self):
         return self._bonds
 
@@ -76,8 +85,7 @@ class Smiles(_BaseReader):
                 type_ = "ar"
             else:
                 type_ = str(int(bond.GetBondType()))
-            b["connect"] = tuple(
-                [bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
+            b["connect"] = tuple([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
             b["type"] = type_
             bonds.append(b)
         return bonds
@@ -102,7 +110,8 @@ class Smiles(_BaseReader):
             if padding < self.num_atoms:
                 raise ValueError(
                     "Padding number should be larger than the atoms number."
-                    "Got {} < {}".format(padding, self.num_atoms))
+                    "Got {} < {}".format(padding, self.num_atoms)
+                )
             matrix = np.zeros((padding, padding), dtype=np.int8)
         for bond in self.bonds:
             edge = [c for c in bond["connect"]]
@@ -113,10 +122,13 @@ class Smiles(_BaseReader):
 
     def to_graph(self, sparse=False, pad_atom=None, pad_bond=None):
         graph = dict()
-        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse,
-                                                       padding=pad_atom)
-        graph["atom_features"] = self.get_atom_features(numeric=True,
-                                                        padding=pad_atom)
-        graph["bond_features"] = self.get_bond_features(numeric=True,
-                                                        padding=pad_bond)
+        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse, padding=pad_atom)
+        graph["atom_features"] = self.get_atom_features(numeric=True, padding=pad_atom)
+        graph["bond_features"] = self.get_bond_features(numeric=True, padding=pad_bond)
         return graph
+
+    def similar_to(self, other, threshold=0.5):
+        sim = DataStructs.FingerprintSimilarity(self.fingerprint, other.fingerprint)
+        if sim > threshold:
+            return True
+        return False

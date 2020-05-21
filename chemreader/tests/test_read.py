@@ -310,6 +310,8 @@ class TestReadingSmiles(unittest.TestCase):
         other = Smiles("C1ccccC1")
         self.assertFalse(self.sm.similar_to(other))
         self.assertTrue(self.sm.similar_to(self.sm))
+        fp = Smiles("C1").fingerprint
+        self.assertIsNone(fp)
 
 
 if __name__ == "__main__":

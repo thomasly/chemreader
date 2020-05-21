@@ -69,6 +69,8 @@ class Smiles(_BaseReader):
         return self._fingerprint
 
     def _get_fingerprint(self):
+        if self.rdkit_mol is None:
+            return None
         fingerprint = AllChem.GetMorganFingerprintAsBitVect(self.rdkit_mol, 2)
         return fingerprint
 

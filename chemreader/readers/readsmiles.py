@@ -13,8 +13,12 @@ class Smiles(_BaseReader):
         r"""
         smiles (str): smiles string
         """
-        self.smiles_str = smiles
+        self._smiles_str = smiles
         self.sanitize = sanitize
+
+    @property
+    def smiles_str(self):
+        return self._smiles_str
 
     @property
     @property_getter

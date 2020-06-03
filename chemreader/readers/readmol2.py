@@ -11,7 +11,6 @@ from .basereader import _BaseReader
 
 
 class Mol2Reader:
-
     def __init__(self, path):
         if path.endswith(".mol2"):
             with open(path, "r") as fh:
@@ -51,23 +50,22 @@ class Mol2Reader:
         """
         if self.file_contents is None:
             return []
-        block_starts = [i for i, l in enumerate(self.file_contents)
-                        if "@<TRIPOS>MOLECULE" in l]
+        block_starts = [
+            i for i, l in enumerate(self.file_contents) if "@<TRIPOS>MOLECULE" in l
+        ]
         if len(block_starts) == 0:
             return []
         blocks = list()
         i = 0
-        while i+1 < len(block_starts):
-            block = "".join(
-                self.file_contents[block_starts[i]: block_starts[i+1]])
+        while i + 1 < len(block_starts):
+            block = "".join(self.file_contents[block_starts[i] : block_starts[i + 1]])
             blocks.append(block)
             i += 1
-        blocks.append("".join(self.file_contents[block_starts[-1]:]))
+        blocks.append("".join(self.file_contents[block_starts[-1] :]))
         return blocks
 
 
 class Mol2Block(_BaseReader):
-
     def __init__(self, block):
         r"""
         block (str): a mol2 format string of molecule block starting with
@@ -150,8 +148,9 @@ class Mol2Block(_BaseReader):
         try:
             return int(self.block["MOLECULE"][1].split()[2])
         except IndexError:
-            logging.warning("num_subst information is not "
-                            "available for {}".format(self.mol_name))
+            logging.warning(
+                "num_subst information is not " "available for {}".format(self.mol_name)
+            )
 
     @property
     @property_getter
@@ -162,8 +161,9 @@ class Mol2Block(_BaseReader):
         try:
             return int(self.block["MOLECULE"][1].split()[3])
         except IndexError:
-            logging.warning("num_feat information is not "
-                            "available for {}".format(self.mol_name))
+            logging.warning(
+                "num_feat information is not " "available for {}".format(self.mol_name)
+            )
 
     @property
     @property_getter
@@ -174,8 +174,9 @@ class Mol2Block(_BaseReader):
         try:
             return int(self.block["MOLECULE"][1].split()[4])
         except IndexError:
-            logging.warning("num_sets information is not "
-                            "available for {}".format(self.mol_name))
+            logging.warning(
+                "num_sets information is not " "available for {}".format(self.mol_name)
+            )
 
     @property
     @property_getter
@@ -235,8 +236,9 @@ class Mol2Block(_BaseReader):
                 charge = atom.split()[8]
                 charges.append(float(charge))
             except IndexError:
-                logging.warning("{} does not have charge "
-                                "information.".format(self.mol_name))
+                logging.warning(
+                    "{} does not have charge " "information.".format(self.mol_name)
+                )
         return charges
 
     @property
@@ -277,7 +279,8 @@ class Mol2Block(_BaseReader):
             if padding < self.num_atoms:
                 raise ValueError(
                     "Padding number should be larger than the atoms number."
-                    "Got {} < {}".format(padding, self.num_atoms))
+                    "Got {} < {}".format(padding, self.num_atoms)
+                )
             matrix = np.zeros((padding, padding), dtype=np.int8)
         for bond in self.bonds:
             edge = [c - 1 for c in bond["connect"]]
@@ -302,11 +305,9 @@ class Mol2Block(_BaseReader):
             atom_degrees.append(atom.GetDegree())
             atom_aromatic.append(int(atom.GetIsAromatic()))
             atom_masses.append(atom.GetMass())
-        for coor, typ, mass, deg, aro in zip(self.coordinates,
-                                             self.atom_types,
-                                             atom_masses,
-                                             atom_degrees,
-                                             atom_aromatic):
+        for coor, typ, mass, deg, aro in zip(
+            self.coordinates, self.atom_types, atom_masses, atom_degrees, atom_aromatic
+        ):
             if numeric:
                 typ = self.atom_to_num(typ)
             features.append((*coor, typ, mass, deg, aro))
@@ -314,31 +315,27 @@ class Mol2Block(_BaseReader):
             if padding < len(features):
                 raise ValueError(
                     "Padding number should be larger than the feature number."
-                    "Got {} < {}".format(padding, len(features)))
-            pad = [(0., 0., 0., self.atom_to_num("ANY"), 0., 0, 0)] * \
-                (padding - len(features))
+                    "Got {} < {}".format(padding, len(features))
+                )
+            pad = [(0.0, 0.0, 0.0, self.atom_to_num("ANY"), 0.0, 0, 0)] * (
+                padding - len(features)
+            )
             features.extend(pad)
         return features
 
     def to_smiles(self, isomeric=False):
         mol = Chem.RemoveHs(self.rdkit_mol)
-        return Chem.MolToSmiles(mol,
-                                isomericSmiles=isomeric,
-                                kekuleSmiles=True)
+        return Chem.MolToSmiles(mol, isomericSmiles=isomeric, kekuleSmiles=True)
 
     def to_graph(self, sparse=False, pad_atom=None, pad_bond=None):
         graph = dict()
-        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse,
-                                                       padding=pad_atom)
-        graph["atom_features"] = self.get_atom_features(numeric=True,
-                                                        padding=pad_atom)
-        graph["bond_features"] = self.get_bond_features(numeric=True,
-                                                        padding=pad_bond)
+        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse, padding=pad_atom)
+        graph["atom_features"] = self.get_atom_features(numeric=True, padding=pad_atom)
+        graph["bond_features"] = self.get_bond_features(numeric=True, padding=pad_bond)
         return graph
 
 
 class Mol2(Mol2Reader):
-
     def __init__(self, path):
         super().__init__(path)
 
@@ -389,8 +386,7 @@ class Mol2(Mol2Reader):
         """
         matrices = list()
         for block in self.mol2_blocks:
-            matrices.append(block.get_adjacency_matrix(sparse=sparse,
-                                                       padding=padding))
+            matrices.append(block.get_adjacency_matrix(sparse=sparse, padding=padding))
         return matrices
 
     def get_atom_features(self, numeric=False, padding=None):
@@ -406,8 +402,9 @@ class Mol2(Mol2Reader):
         """
         atom_features = list()
         for block in self.mol2_blocks:
-            atom_features.append(block.get_atom_features(numeric=numeric,
-                                                         padding=padding))
+            atom_features.append(
+                block.get_atom_features(numeric=numeric, padding=padding)
+            )
         return atom_features
 
     def get_bond_features(self, numeric=False, padding=None):
@@ -421,8 +418,9 @@ class Mol2(Mol2Reader):
         """
         bond_features = list()
         for block in self.mol2_blocks:
-            bond_features.append(block.get_bond_features(numeric=numeric,
-                                                         padding=padding))
+            bond_features.append(
+                block.get_bond_features(numeric=numeric, padding=padding)
+            )
         return bond_features
 
     def to_graphs(self, sparse=False, pad_atom=None, pad_bond=None):
@@ -432,7 +430,7 @@ class Mol2(Mol2Reader):
         """
         graphs = list()
         for block in self.mol2_blocks:
-            graphs.append(block.to_graph(sparse=sparse,
-                                         pad_atom=pad_atom,
-                                         pad_bond=pad_bond))
+            graphs.append(
+                block.to_graph(sparse=sparse, pad_atom=pad_atom, pad_bond=pad_bond)
+            )
         return graphs

@@ -130,7 +130,7 @@ class Smiles(_BaseReader):
         graph = dict()
         graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse, padding=pad_atom)
         graph["atom_features"] = self.get_atom_features(numeric=True, padding=pad_atom)
-        graph["bond_features"] = self.get_bond_features(numeric=True, padding=pad_bond)
+        graph["bond_features"] = self.get_bond_features(numeric=True)
         return graph
 
     def similar_to(self, other, threshold=0.5):

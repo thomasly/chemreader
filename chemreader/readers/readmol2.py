@@ -251,8 +251,8 @@ class Mol2Block(_BaseReader):
         for bond in self.block["BOND"]:
             b = dict()
             tokens = bond.split()
-            start = int(tokens[1])
-            end = int(tokens[2])
+            start = int(tokens[1]) - 1
+            end = int(tokens[2]) - 1
             type_ = tokens[3]
             b["connect"] = tuple([start, end])
             b["type"] = type_
@@ -283,7 +283,7 @@ class Mol2Block(_BaseReader):
                 )
             matrix = np.zeros((padding, padding), dtype=np.int8)
         for bond in self.bonds:
-            edge = [c - 1 for c in bond["connect"]]
+            edge = [c for c in bond["connect"]]
             matrix[edge, edge[::-1]] = 1
         if sparse:
             matrix = sp.csr_matrix(matrix)
@@ -327,11 +327,11 @@ class Mol2Block(_BaseReader):
         mol = Chem.RemoveHs(self.rdkit_mol)
         return Chem.MolToSmiles(mol, isomericSmiles=isomeric, kekuleSmiles=True)
 
-    def to_graph(self, sparse=False, pad_atom=None, pad_bond=None):
+    def to_graph(self, sparse=False):
         graph = dict()
-        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse, padding=pad_atom)
-        graph["atom_features"] = self.get_atom_features(numeric=True, padding=pad_atom)
-        graph["bond_features"] = self.get_bond_features(numeric=True, padding=pad_bond)
+        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse)
+        graph["atom_features"] = self.get_atom_features(numeric=True)
+        graph["bond_features"] = self.get_bond_features(numeric=True)
         return graph
 
 
@@ -376,7 +376,7 @@ class Mol2(Mol2Reader):
             mw.append(block.molecular_weight)
         return mw
 
-    def get_adjacency_matrices(self, sparse=False, padding=None):
+    def get_adjacency_matrices(self, sparse=False):
         r""" Get adjacency matrices of the molecules as graphs
         sparse (bool): if to use sparse format for the matrices
         =======================================================================
@@ -386,10 +386,10 @@ class Mol2(Mol2Reader):
         """
         matrices = list()
         for block in self.mol2_blocks:
-            matrices.append(block.get_adjacency_matrix(sparse=sparse, padding=padding))
+            matrices.append(block.get_adjacency_matrix(sparse=sparse))
         return matrices
 
-    def get_atom_features(self, numeric=False, padding=None):
+    def get_atom_features(self, numeric=False):
         r""" Get atom features (coordinates, atom type)
         numeric (bool): if True, return the atom types as numbers. The
             atoms that are able to be converted to consistant numbers are:
@@ -402,12 +402,10 @@ class Mol2(Mol2Reader):
         """
         atom_features = list()
         for block in self.mol2_blocks:
-            atom_features.append(
-                block.get_atom_features(numeric=numeric, padding=padding)
-            )
+            atom_features.append(block.get_atom_features(numeric=numeric))
         return atom_features
 
-    def get_bond_features(self, numeric=False, padding=None):
+    def get_bond_features(self, numeric=False):
         r""" Get bond features/types
         numeric (bool): if True, returen the bond types as numbers. Convertable
             bond types are "1,2,3,am,ar,du,un,nc". All other bond types will be
@@ -418,19 +416,15 @@ class Mol2(Mol2Reader):
         """
         bond_features = list()
         for block in self.mol2_blocks:
-            bond_features.append(
-                block.get_bond_features(numeric=numeric, padding=padding)
-            )
+            bond_features.append(block.get_bond_features(numeric=numeric))
         return bond_features
 
-    def to_graphs(self, sparse=False, pad_atom=None, pad_bond=None):
+    def to_graphs(self, sparse=False):
         r""" Convert the molecules to graphs that represented by atom features,
         bond types, and adjacency matrices.
         sparse (bool): if to use sparse format for the adjacency matrix
         """
         graphs = list()
         for block in self.mol2_blocks:
-            graphs.append(
-                block.to_graph(sparse=sparse, pad_atom=pad_atom, pad_bond=pad_bond)
-            )
+            graphs.append(block.to_graph(sparse=sparse))
         return graphs

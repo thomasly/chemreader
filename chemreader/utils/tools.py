@@ -19,11 +19,13 @@ def property_getter(func):
             code to construct the property
             return property_value
     """
+
     def wrapper(instance):
         try:
             return func(instance)
         except AttributeError:
-            instance.__dict__["_"+func.__name__] = \
-                instance.__getattribute__("_get_"+func.__name__)()
+            getter = instance.__getattribute__("_get_" + func.__name__)
+            instance.__dict__["_" + func.__name__] = getter()
             return func(instance)
+
     return wrapper

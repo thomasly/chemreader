@@ -6,6 +6,7 @@ from scipy import sparse as sp
 
 from ..readers import Mol2, Mol2Block
 from ..readers import Smiles
+from ..readers import PDB, PartialPDB
 
 
 class TestReadingMol2File(unittest.TestCase):
@@ -312,6 +313,37 @@ class TestReadingSmiles(unittest.TestCase):
         self.assertTrue(self.sm.similar_to(self.sm))
         fp = Smiles("C1").fingerprint
         self.assertIsNone(fp)
+
+
+class TestReadPDB(unittest.TestCase):
+    def setUp(self):
+        self.fpath = os.path.join(
+            "chemreader", "tests", "testing_resources", "3CQW.pdb"
+        )
+
+    def test_mol_from_pdb_file(self):
+        pdb = PDB(self.fpath)
+        graph = pdb.to_graph()
+        self.assertIn("adjacency", graph)
+        self.assertIn("atom_features", graph)
+        self.assertIn("bond_features", graph)
+
+    def test_partial_pdb(self):
+        al = [0, 1, 2, 3, 10]
+        part_pdb = PartialPDB(self.fpath, atom_list=al)
+        part_pdb.coordinates
+        dist_mat = part_pdb._pairwise_dist()
+        self.assertEqual(dist_mat.shape, (len(al), len(al)))
+        part_pdb.cutoff = 1.5
+        adj = part_pdb.get_adjacency_matrix()
+        self.assertEqual(adj.shape, (len(al), len(al)))
+        self.assertEqual(adj[0, 0], 1)
+        self.assertEqual(adj[2, 1], 0)
+        graph = part_pdb.to_graph()
+        self.assertIn("adjacency", graph)
+        self.assertIn("atom_features", graph)
+        self.assertEqual(len(graph["atom_features"]), len(al))
+        self.assertNotIn("bond_features", graph)
 
 
 if __name__ == "__main__":

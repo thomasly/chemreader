@@ -5,6 +5,7 @@ from unittest import TestCase
 from ..writers import GraphWriter
 from ..readers import Mol2
 from ..readers import Smiles
+from ..readers import PDB, PartialPDB
 
 
 class TestGraphWriting(TestCase):
@@ -182,3 +183,12 @@ class TestGraphWriting(TestCase):
         writer.write(self.outpath, prefix=None, graph_labels=labels)
         self.assertTrue(os.path.isfile(os.path.join(self.outpath, "A.txt")))
         self.assertTrue(os.path.isfile(os.path.join(self.outpath, "graph_labels.txt")))
+
+    def test_generating_graphs_from_pdb(self):
+        fpath = os.path.join("chemreader", "tests", "testing_resources", "3CQW.pdb")
+        pdb = PDB(fpath)
+        part_pdb = PartialPDB(fpath, atom_list=list(range(10)), cutoff=1.5)
+        writer = GraphWriter([pdb])
+        writer.write(self.outpath, prefix="pdb", edge_features=False)
+        writer = GraphWriter([part_pdb])
+        writer.write(self.outpath, prefix="part_pdb", edge_features=False)

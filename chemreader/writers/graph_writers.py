@@ -12,7 +12,7 @@ class GraphWriter(_BaseWriter):
         super().__init__(**kwargs)
         self.mols = mols
 
-    def write(self, out_path, prefix=None, graph_labels=None):
+    def write(self, out_path, prefix=None, edge_features=True, graph_labels=None):
         """ Write graphs to path.
 
         Args:
@@ -32,7 +32,10 @@ class GraphWriter(_BaseWriter):
         a = open(os.path.join(out_path, prefix + "A.txt"), "w")
         idc = open(os.path.join(out_path, prefix + "graph_indicator.txt"), "w")
         n_label = open(os.path.join(out_path, prefix + "node_attributes.txt"), "w")
-        edge_attr = open(os.path.join(out_path, prefix + "edge_attributes.txt"), "w")
+        if edge_features:
+            edge_attr = open(
+                os.path.join(out_path, prefix + "edge_attributes.txt"), "w"
+            )
         # initialize variables for graph indicator and nodes indices
         graph_id = 1
         node_starting_index = 0
@@ -40,13 +43,15 @@ class GraphWriter(_BaseWriter):
             graph = mol.to_graph(sparse=True)
             adj = graph["adjacency"].tocoo()
             atom_feat = graph["atom_features"]
-            bond_feat = graph["bond_features"]
+            if edge_features:
+                bond_feat = graph["bond_features"]
             # write adjacency matrix and update node starting index
             for origin, target in zip(adj.row, adj.col):
-                # write bond features
-                bond = str(origin) + "-" + str(target)
-                writable_bond_feat = str(bond_feat[bond]) + "\n"
-                edge_attr.write(writable_bond_feat)
+                if edge_features:
+                    # write bond features
+                    bond = str(origin) + "-" + str(target)
+                    writable_bond_feat = str(bond_feat[bond]) + "\n"
+                    edge_attr.write(writable_bond_feat)
                 origin = origin + 1 + node_starting_index
                 target = target + 1 + node_starting_index
                 a.write(str(origin) + "," + str(target) + "\n")
@@ -64,7 +69,8 @@ class GraphWriter(_BaseWriter):
         a.close()
         idc.close()
         n_label.close()
-        edge_attr.close()
+        if edge_features:
+            edge_attr.close()
         # write graph labels
         if graph_labels is not None:
             g_label = open(os.path.join(out_path, prefix + "graph_labels.txt"), "w")

@@ -1,4 +1,4 @@
-from rdkit.Chem.rdmolfiles import MolFromPDBFile
+from rdkit.Chem.rdmolfiles import MolFromPDBFile, MolFromPDBBlock
 import numpy as np
 from scipy.spatial.distance import pdist
 from scipy import sparse as sp
@@ -14,6 +14,12 @@ class PDB(_BaseReader):
         """
         self._fpath = fpath
         self._sanitize = sanitize
+
+    @classmethod
+    def from_pdb_block(cls, block, sanitize=True):
+        inst = cls(fpath=None, sanitize=sanitize)
+        inst._rdkit_mol = MolFromPDBBlock(block)
+        return inst
 
     @property
     @property_getter
@@ -97,12 +103,45 @@ class PDB(_BaseReader):
         graph["bond_features"] = self.get_bond_features(numeric=True)
         return graph
 
+    def _is_atom(self, pdb_line):
+        if pdb_line.startswith("ATOM"):
+            return True
+        if pdb_line.startswith("HETATM"):
+            atom_type = pdb_line[17:20].strip().upper()
+            if atom_type == "HOH":
+                return False
+            return True
+        return False
+
+    def get_atom_coordinates(self):
+        """ Get atom coordinates from the raw pdb file.
+        Return:
+            list: list of atom coordinates with the same order as the pdb file.
+        """
+        atoms = list()
+        with open(self._fpath, "r") as f:
+            lines = f.readlines()
+        for l in lines:
+            if not self._is_atom(l):
+                continue
+            x = float(l[30:38])
+            y = float(l[38:46])
+            z = float(l[46:54])
+            atoms.append((x, y, z))
+        return atoms
+
 
 class PartialPDB(PDB):
     def __init__(self, fpath, atom_list=None, cutoff=None, sanitize=True):
         super().__init__(fpath, sanitize=sanitize)
         self._atom_list = atom_list
         self._cutoff = cutoff
+
+    @classmethod
+    def from_pdb_block(cls, block, atom_list=None, cutoff=None, sanitize=True):
+        inst = cls(fpath=None, atom_list=atom_list, cutoff=cutoff, sanitize=sanitize)
+        inst._rdkit_mol = MolFromPDBBlock(block)
+        return inst
 
     @property
     def atom_list(self):

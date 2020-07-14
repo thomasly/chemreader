@@ -345,6 +345,18 @@ class TestReadPDB(unittest.TestCase):
         self.assertEqual(len(graph["atom_features"]), len(al))
         self.assertNotIn("bond_features", graph)
 
+    def test_coordinates(self):
+        pdb = PDB(self.fpath, sanitize=False)
+        counter = 0
+        for atom in pdb.rdkit_mol.GetAtoms():
+            print(atom.GetSymbol(), end=" ")
+            counter += 1
+        print()
+        print(counter)
+        atoms = pdb.get_atom_coordinates()
+        self.assertIsInstance(atoms, list)
+        self.assertEqual(len(atoms), pdb.num_atoms)
+
 
 if __name__ == "__main__":
     unittest.main()

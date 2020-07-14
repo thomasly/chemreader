@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="chemreader",
-    version="0.2.0",
+    version="0.2.1",
     author="Yang Liu",
     author_email="thomasliuy@gmail.com",
     description="Read data from typical chemical file formats",
@@ -18,6 +18,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    install_requires=[],
-    python_requires='>=3.6',
+    install_requires=["numpy", "scipy", "rdkit"],
+    python_requires=">=3.6",
 )

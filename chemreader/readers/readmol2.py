@@ -11,7 +11,14 @@ from .basereader import _BaseReader
 
 
 class Mol2Reader:
+    """ Read .mol2 file and extract molecules in the file as blocks.
+    """
+
     def __init__(self, path):
+        """
+        Args:
+            path (str): path to the file
+        """
         if path.endswith(".mol2"):
             with open(path, "r") as fh:
                 self.file_contents = fh.readlines()
@@ -19,7 +26,7 @@ class Mol2Reader:
             with gzip.open(path, "r") as fh:
                 try:
                     lines = fh.readlines()
-                    self.file_contents = [l.decode() for l in lines]
+                    self.file_contents = [line.decode() for line in lines]
                 except OSError:
                     logging.error("{} is not readble by gzip".format(path))
                     self.file_contents = None
@@ -28,20 +35,28 @@ class Mol2Reader:
 
     @property
     def n_mols(self):
+        """
+        Returns:
+            int: Number of molecules in the file
+        """
         if self.file_contents is None:
             return 0
         try:
             return self._n_mols
         except AttributeError:
             self._n_mols = 0
-            for l in self.file_contents:
-                if "@<TRIPOS>MOLECULE" in l:
+            for line in self.file_contents:
+                if "@<TRIPOS>MOLECULE" in line:
                     self._n_mols += 1
             return self._n_mols
 
     @property
     @property_getter
     def blocks(self):
+        """
+        Returns:
+            list: list of block contents as strings.
+        """
         return self._blocks
 
     def _get_blocks(self):

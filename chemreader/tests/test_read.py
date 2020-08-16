@@ -6,7 +6,7 @@ from scipy import sparse as sp
 
 from ..readers import Mol2, Mol2Block
 from ..readers import Smiles
-from ..readers import PDB, PartialPDB
+from ..readers import PDB, PartialPDB, PDBBB
 
 
 class TestReadingMol2File(unittest.TestCase):
@@ -331,7 +331,6 @@ class TestReadPDB(unittest.TestCase):
     def test_partial_pdb(self):
         al = [0, 1, 2, 3, 10]
         part_pdb = PartialPDB(self.fpath, atom_list=al)
-        part_pdb.coordinates
         dist_mat = part_pdb._pairwise_dist()
         self.assertEqual(dist_mat.shape, (len(al), len(al)))
         part_pdb.cutoff = 1.5
@@ -344,6 +343,10 @@ class TestReadPDB(unittest.TestCase):
         self.assertIn("atom_features", graph)
         self.assertEqual(len(graph["atom_features"]), len(al))
         self.assertNotIn("bond_features", graph)
+        conformer = part_pdb.rdkit_mol.GetConformer()
+        self.assertEqual(
+            graph["atom_features"][-1][:3], tuple(conformer.GetAtomPosition(10))
+        )
 
     def test_coordinates(self):
         pdb = PDB(self.fpath, sanitize=False)
@@ -357,6 +360,22 @@ class TestReadPDB(unittest.TestCase):
         self.assertIsInstance(atoms, list)
         self.assertEqual(len(atoms), pdb.num_atoms)
 
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_backbone_pdb(self):
+        pdb = PDBBB(self.fpath, sanitize=False)
+        adj = pdb.get_adjacency_matrix()
+        self.assertTrue(np.array_equal(adj.diagonal(), np.ones(pdb.num_atoms,)))
+        self.assertTrue(
+            np.array_equal(adj.diagonal(offset=1), np.ones(pdb.num_atoms - 1,))
+        )
+        self.assertTrue(
+            np.array_equal(adj.diagonal(offset=-1), np.ones(pdb.num_atoms - 1,))
+        )
+        self.assertTrue(
+            np.array_equal(adj.diagonal(offset=2), np.zeros(pdb.num_atoms - 2,))
+        )
+        self.assertTrue(
+            np.array_equal(adj.diagonal(offset=-2), np.zeros(pdb.num_atoms - 2,))
+        )
+        # assert only backbone atoms are included in atom_features
+        self.assertEqual(len(pdb.get_atom_features()), 319 * 3)
+        self.assertEqual(pdb.get_atom_features()[-1][:3], [-14.909, -4.100, 8.772])

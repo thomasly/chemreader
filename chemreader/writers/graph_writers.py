@@ -20,7 +20,7 @@ class GraphWriter(_BaseWriter):
             prefix (str): Optional. Prefix of the output file names. Default is
                 None.
 
-        Outputs:
+        Returns:
             prefix_A.txt: adjacency matrices
             prefix_graph_indicator.txt: graph indicator
             prefix_node_label.txt: node features

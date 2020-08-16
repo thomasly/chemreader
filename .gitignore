@@ -1,3 +1,6 @@
+# doc build
+doc/_build
+
 # playground
 playground.ipynb
 

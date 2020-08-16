@@ -2,12 +2,40 @@ from rdkit.Chem.rdmolfiles import MolFromPDBFile, MolFromPDBBlock
 import numpy as np
 from scipy.spatial.distance import pdist
 from scipy import sparse as sp
+from scipy.linalg import toeplitz
 
 from .basereader import _BaseReader
 from ..utils.tools import property_getter
 
 
 class PDB(_BaseReader):
+    """ Read PDB file and convert to graph.
+    """
+
+    resi_to_int = {
+        "ALA": 0,
+        "CYS": 1,
+        "ASP": 2,
+        "GLU": 3,
+        "PHE": 4,
+        "GLY": 5,
+        "HIS": 6,
+        "ILE": 7,
+        "LYS": 8,
+        "LEU": 9,
+        "MET": 10,
+        "ASN": 11,
+        "PRO": 12,
+        "GLN": 13,
+        "ARG": 14,
+        "SER": 15,
+        "THR": 16,
+        "VAL": 17,
+        "TRP": 18,
+        "TYR": 19,
+        "NAA": 20,  # not a amino acid
+    }
+
     def __init__(self, fpath, sanitize=True):
         r"""
         smiles (str): smiles string
@@ -76,9 +104,12 @@ class PDB(_BaseReader):
 
     def get_adjacency_matrix(self, sparse=False, padding=None):
         r""" Get the adjacency matrix of the molecular graph.
-        spase (bool): if True, return the matrix in sparse format
+
+        Params:
+            spase (bool): if True, return the matrix in sparse format
         =======================================================================
-        return (numpy.array or scipy.sparse.csc_matrix)
+        Return:
+            numpy.array or scipy.sparse.csc_matrix
         """
         if padding is None:
             matrix = np.zeros((self.num_atoms, self.num_atoms), dtype=np.int8)
@@ -121,12 +152,12 @@ class PDB(_BaseReader):
         atoms = list()
         with open(self._fpath, "r") as f:
             lines = f.readlines()
-        for l in lines:
-            if not self._is_atom(l):
+        for line in lines:
+            if not self._is_atom(line):
                 continue
-            x = float(l[30:38])
-            y = float(l[38:46])
-            z = float(l[46:54])
+            x = float(line[30:38])
+            y = float(line[38:46])
+            z = float(line[46:54])
             atoms.append((x, y, z))
         return atoms
 
@@ -208,16 +239,20 @@ class PartialPDB(PDB):
             are coordinates and the last string or number is atom type.
         """
         features = list()
+        atom_coors = list()
+        atom_types = list()
         atom_degrees = list()
         atom_aromatic = list()
         atom_masses = list()
         for atom_id in self.atom_list:
+            atom_coors.append(self.coordinates[atom_id])
+            atom_types.append(self.atom_types[atom_id])
             atom = self.rdkit_mol.GetAtomWithIdx(atom_id)
             atom_degrees.append(atom.GetDegree())
             atom_aromatic.append(int(atom.GetIsAromatic()))
             atom_masses.append(atom.GetMass())
         for coor, typ, mass, deg, aro in zip(
-            self.coordinates, self.atom_types, atom_masses, atom_degrees, atom_aromatic
+            atom_coors, atom_types, atom_masses, atom_degrees, atom_aromatic
         ):
             if numeric:
                 typ = self.atom_to_num(typ)
@@ -229,3 +264,59 @@ class PartialPDB(PDB):
         graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse)
         graph["atom_features"] = self.get_atom_features(numeric=True)
         return graph
+
+
+class PDBBB(PartialPDB):
+    """ Convert protein backbone to graph from PDB file.
+    """
+
+    def __init__(self, fpath, sanitize=True):
+        super().__init__(fpath=fpath, atom_list=None, cutoff=None, sanitize=sanitize)
+        self._atom_list = self._get_backbone_atoms()
+
+    def _get_backbone_atoms(self):
+        atoms = list()
+        for atom in self.rdkit_mol.GetAtoms():
+            pdbinfo = atom.GetPDBResidueInfo()
+            if pdbinfo.GetName().strip().upper() in ["N", "CA", "C"]:
+                atoms.append(atom.GetIdx())
+        return atoms
+
+    def get_adjacency_matrix(self, sparse=False):
+        r""" Get the adjacency matrix of the molecular graph with distance.
+        spase (bool): if True, return the matrix in sparse format
+        =======================================================================
+        return (numpy.array or scipy.sparse.csc_matrix)
+        """
+        first_row = np.zeros((self.num_atoms,))
+        first_row[[0, 1]] = 1
+        first_col = np.zeros((self.num_atoms,))
+        first_col[[0, 1]] = 1
+        matrix = toeplitz(first_row, first_col)
+        if sparse:
+            matrix = sp.csr_matrix(matrix)
+        return matrix
+
+    def get_atom_features(self, numeric=False):
+        r""" Get the atom features in the block. The feature contains
+        coordinate and atom type for each atom.
+        Params:
+            numeric (bool): if True, return the atom type as a number.
+        =======================================================================
+        Return:
+            list of tuples. The first three numbers in the tuples
+            are coordinates and the last string or number is atom type.
+        """
+        features = list()
+        conf = self.rdkit_mol.GetConformer()
+        for atom_id in self.atom_list:
+            feat = list()
+            feat += conf.GetAtomPosition(atom_id)
+            atom = self.rdkit_mol.GetAtomWithIdx(atom_id)
+            pdbinfo = atom.GetPDBResidueInfo()
+            try:
+                feat.append(self.resi_to_int[pdbinfo.GetResidueName()])
+            except KeyError:
+                feat.append(self.resi_to_int["NAA"])
+            features.append(feat)
+        return features

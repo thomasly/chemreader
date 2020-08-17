@@ -363,19 +363,21 @@ class TestReadPDB(unittest.TestCase):
     def test_backbone_pdb(self):
         pdb = PDBBB(self.fpath, sanitize=False)
         adj = pdb.get_adjacency_matrix()
-        self.assertTrue(np.array_equal(adj.diagonal(), np.ones(pdb.num_atoms,)))
+        self.assertTrue(np.array_equal(adj.diagonal(), np.ones(len(pdb.atom_list),)))
         self.assertTrue(
-            np.array_equal(adj.diagonal(offset=1), np.ones(pdb.num_atoms - 1,))
+            np.array_equal(adj.diagonal(offset=1), np.ones(len(pdb.atom_list) - 1,))
         )
         self.assertTrue(
-            np.array_equal(adj.diagonal(offset=-1), np.ones(pdb.num_atoms - 1,))
+            np.array_equal(adj.diagonal(offset=-1), np.ones(len(pdb.atom_list) - 1,))
         )
         self.assertTrue(
-            np.array_equal(adj.diagonal(offset=2), np.zeros(pdb.num_atoms - 2,))
+            np.array_equal(adj.diagonal(offset=2), np.zeros(len(pdb.atom_list) - 2,))
         )
         self.assertTrue(
-            np.array_equal(adj.diagonal(offset=-2), np.zeros(pdb.num_atoms - 2,))
+            np.array_equal(adj.diagonal(offset=-2), np.zeros(len(pdb.atom_list) - 2,))
         )
+        atom_features = pdb.get_atom_features()
         # assert only backbone atoms are included in atom_features
-        self.assertEqual(len(pdb.get_atom_features()), 319 * 3)
-        self.assertEqual(pdb.get_atom_features()[-1][:3], [-14.909, -4.100, 8.772])
+        self.assertEqual(len(atom_features), 319 * 3)
+        self.assertEqual(atom_features[-1][:3], [-14.909, -4.100, 8.772])
+        self.assertEqual(len(atom_features), adj.shape[0])

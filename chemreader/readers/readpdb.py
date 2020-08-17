@@ -288,9 +288,9 @@ class PDBBB(PartialPDB):
         =======================================================================
         return (numpy.array or scipy.sparse.csc_matrix)
         """
-        first_row = np.zeros((self.num_atoms,))
+        first_row = np.zeros((len(self.atom_list,)))
         first_row[[0, 1]] = 1
-        first_col = np.zeros((self.num_atoms,))
+        first_col = np.zeros((len(self.atom_list,)))
         first_col[[0, 1]] = 1
         matrix = toeplitz(first_row, first_col)
         if sparse:

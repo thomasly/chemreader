@@ -381,3 +381,4 @@ class TestReadPDB(unittest.TestCase):
         self.assertEqual(len(atom_features), 319 * 3)
         self.assertEqual(atom_features[-1][:3], [-14.909, -4.100, 8.772])
         self.assertEqual(len(atom_features), adj.shape[0])
+        self.assertEqual(len(atom_features[0]), 5)

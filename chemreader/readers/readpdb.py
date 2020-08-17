@@ -270,6 +270,8 @@ class PDBBB(PartialPDB):
     """ Convert protein backbone to graph from PDB file.
     """
 
+    _atom2int = {"C": 0, "N": 1}
+
     def __init__(self, fpath, sanitize=True):
         super().__init__(fpath=fpath, atom_list=None, cutoff=None, sanitize=sanitize)
         self._atom_list = self._get_backbone_atoms()
@@ -313,6 +315,7 @@ class PDBBB(PartialPDB):
             feat = list()
             feat += conf.GetAtomPosition(atom_id)
             atom = self.rdkit_mol.GetAtomWithIdx(atom_id)
+            feat.append(self._atom2int[atom.GetSymbol()])
             pdbinfo = atom.GetPDBResidueInfo()
             try:
                 feat.append(self.resi_to_int[pdbinfo.GetResidueName()])

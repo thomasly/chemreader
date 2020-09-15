@@ -104,7 +104,7 @@ class Smiles(_BaseReader):
     def _get_molecular_weight(self):
         return ExactMolWt(self.rdkit_mol)
 
-    def get_adjacency_matrix(self, sparse=False, padding=None):
+    def get_adjacency_matrix(self, sparse=False, sort_atoms=False, padding=None):
         r""" Get the adjacency matrix of the molecular graph.
         spase (bool): if True, return the matrix in sparse format
         =======================================================================
@@ -122,15 +122,23 @@ class Smiles(_BaseReader):
         for bond in self.bonds:
             edge = [c for c in bond["connect"]]
             matrix[edge, edge[::-1]] = 1
+        if sort_atoms:
+            matrix = self.rebuild_adj(matrix, [at.GetIdx() for at in self.sorted_atoms])
         if sparse:
             matrix = sp.csr_matrix(matrix)
         return matrix
 
-    def to_graph(self, sparse=False, pad_atom=None, pad_bond=None):
+    def to_graph(self, sparse=False, sort_atoms=False, pad_atom=None, pad_bond=None):
         graph = dict()
-        graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse, padding=pad_atom)
-        graph["atom_features"] = self.get_atom_features(numeric=True, padding=pad_atom)
-        graph["bond_features"] = self.get_bond_features(numeric=True)
+        graph["adjacency"] = self.get_adjacency_matrix(
+            sparse=sparse, sort_atoms=sort_atoms, padding=pad_atom
+        )
+        graph["atom_features"] = self.get_atom_features(
+            numeric=True, sort_atoms=sort_atoms, padding=pad_atom
+        )
+        graph["bond_features"] = self.get_bond_features(
+            numeric=True, sort_atoms=sort_atoms
+        )
         return graph
 
     def similar_to(self, other, threshold=0.5):

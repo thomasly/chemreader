@@ -1,5 +1,6 @@
+from copy import deepcopy
+
 from abc import ABCMeta, abstractmethod, abstractproperty
-from rdkit.Chem import AllChem
 import numpy as np
 
 
@@ -129,15 +130,21 @@ class _BaseReader(metaclass=ABCMeta):
     def get_atom_features(self, numeric=False, sort_atoms=False, padding=None):
         r""" Get the atom features in the block. The feature contains
         coordinate and atom type for each atom.
-        numeric (bool): if True, return the atom type as a number.
-        =======================================================================
-        return (list): list of tuples. Features are atom type, atom mass, atom
-            degree, and atom aromatic
+        Args:
+            numeric (bool): if True, return the atom type as a number.
+            sort_atoms (bool): Default is False. If True, sort the atoms by atom type.
+            padding (None or int): Pad atom feature matrix to a fix length. The number
+                must be larger than the number of atoms in the molecules.
+
+        Returns:
+            list: list of tuples. Features are atom type, atom mass, atom
+                degree, and atom aromatic
         """
         features = list()
-        atoms = self.rdkit_mol.GetAtoms()
         if sort_atoms:
             atoms = self.sorted_atoms
+        else:
+            atoms = self.rdkit_mol.GetAtoms()
         for i, atom in enumerate(atoms):
             feature = list()
             # the features of an atom includes: atom type, degree, formal charge,
@@ -166,6 +173,25 @@ class _BaseReader(metaclass=ABCMeta):
             features.extend(pad)
         return features
 
+    def sort_bonds(self, unsorted_bonds):
+        """ Sort bonds based on sorted atoms.
+        Args:
+            unsorted_bonds (list): list of bonds in chemical compound.
+
+        Returns:
+            dict: Bond feature dict.
+        """
+        new_idx = {old.GetIdx(): new for new, old in enumerate(self.sorted_atoms)}
+        sorted_bonds = list()
+        for bond in unsorted_bonds:
+            start, end = bond["connect"]
+            new_bond = deepcopy(bond)
+            new_bond["connect"] = [0, 0]
+            new_bond["connect"][0] = new_idx[start]
+            new_bond["connect"][1] = new_idx[end]
+            sorted_bonds.append(new_bond)
+        return sorted_bonds
+
     def get_bond_features(self, numeric=False, sort_atoms=False):
         r""" Get the bond features/types in the block.
         numeric (bool): if True, return the bond type as a number.
@@ -173,7 +199,11 @@ class _BaseReader(metaclass=ABCMeta):
         return (list): list of bond types.
         """
         features = dict()
-        for bond in self.bonds:
+        if sort_atoms:
+            bonds = self.sort_bonds(self.bonds)
+        else:
+            bonds = self.bonds
+        for bond in bonds:
             type_ = bond["type"]
             conn = str(bond["connect"][0]) + "-" + str(bond["connect"][1])
             conn2 = str(bond["connect"][1]) + "-" + str(bond["connect"][0])

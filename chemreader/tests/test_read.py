@@ -316,6 +316,16 @@ class TestReadingSmiles(unittest.TestCase):
         # with self.assertRaises(ValueError):
         #     self.sm.get_bond_features(padding=12)
 
+    def test_sorted_bond_features(self):
+        feats = self.sm.get_bond_features(sort_atoms=True)
+        self.assertEqual(len(feats), 26)
+        self.assertEqual(feats["0-5"], "1")
+        with self.assertRaises(KeyError):
+            feats["0-1"]
+        unsorted_feats = self.sm.get_bond_features(sort_atoms=False)
+        self.assertEqual(len(unsorted_feats), 26)
+        self.assertEqual(unsorted_feats["0-1"], "1")
+
     def test_graph(self):
         graph = self.sm.to_graph()
         self.assertEqual(len(graph), 3)

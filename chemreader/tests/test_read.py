@@ -4,10 +4,12 @@ import logging
 
 import numpy as np
 from scipy import sparse as sp
+from rdkit import Chem
 
 from ..readers import Mol2, Mol2Block
 from ..readers import Smiles
 from ..readers import PDB, PartialPDB, PDBBB
+from ..readers.readmol import MolReader, MolBlock
 
 
 class TestReadingMol2File(unittest.TestCase):
@@ -413,3 +415,30 @@ class TestReadPDB(unittest.TestCase):
         self.assertEqual(atom_features[-1][:3], [-14.909, -4.100, 8.772])
         self.assertEqual(len(atom_features), adj.shape[0])
         self.assertEqual(len(atom_features[0]), 5)
+
+
+class TestReadMol(unittest.TestCase):
+    def setUp(self):
+        self.fpath = os.path.join(
+            "chemreader", "tests", "testing_resources", "test_mol_reader.mol"
+        )
+
+    def test_block_reading(self):
+        reader = MolReader(self.fpath)
+        self.assertEqual(reader.n_mols, 3)
+        self.assertIsInstance(reader.blocks, list)
+        self.assertEqual(len(reader.blocks), 3)
+
+        block = MolBlock(reader.blocks[0])
+        self.assertIsInstance(block.rdkit_mol, Chem.rdchem.Mol)
+        self.assertEqual(block.rdkit_mol.GetNumAtoms(), 24)
+        self.assertEqual(block.rdkit_mol.GetNumBonds(), 26)
+        adj = block.get_adjacency_matrix(sparse=False)
+        self.assertEqual(adj.shape, (24, 24))
+        sparse_adj = block.get_adjacency_matrix(sparse=True)
+        self.assertIsInstance(sparse_adj, sp.csr.csr_matrix)
+        atom_features = block.get_atom_features(numeric=False)
+        self.assertEqual(len(atom_features), 24)
+        self.assertEqual(atom_features[21][3], "Cl")
+        atom_features = block.get_atom_features(numeric=True)
+        self.assertEqual(atom_features[21][3], 7)

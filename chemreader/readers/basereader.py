@@ -96,10 +96,6 @@ class _BaseReader(metaclass=ABCMeta):
         """ RDKit Mol object
         """
 
-    # def rdkit_conformer(self):
-    #     """ RDKit Conformer object
-    #     """
-
     @abstractproperty
     def atom_types(self):
         """ Atom types

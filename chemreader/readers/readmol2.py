@@ -5,6 +5,7 @@ from rdkit import Chem
 from rdkit.Chem.Descriptors import ExactMolWt
 import numpy as np
 from scipy import sparse as sp
+from tqdm import tqdm
 
 from ..utils.tools import property_getter
 from .basereader import _BaseReader
@@ -340,7 +341,7 @@ class Mol2Block(_BaseReader):
 
     def to_smiles(self, isomeric=False):
         mol = Chem.RemoveHs(self.rdkit_mol)
-        return Chem.MolToSmiles(mol, isomericSmiles=isomeric, kekuleSmiles=True)
+        return Chem.MolToSmiles(mol, isomericSmiles=isomeric)
 
     def to_graph(self, sparse=False):
         graph = dict()
@@ -368,16 +369,18 @@ class Mol2(Mol2Reader):
             m2blocks.append(Mol2Block(block))
         return m2blocks
 
-    def to_smiles(self, isomeric=False):
+    def to_smiles(self, isomeric=False, verbose=0):
         r""" Convert the molecules in the file to SMILES strings
         isomeric (bool): False for cannonical, True for isomeric SMILES.
             Default is False.
+        verbose (bool): Set to True to show progress bar.
         return (list): list of SMILES strings. If the molecule is not valid,
             an empty string will be added to the corresponding position in the
             list.
         """
         smiles = list()
-        for block in self.mol2_blocks:
+        it = tqdm(self.mol2_blocks) if verbose else self.mol2_blocks
+        for block in it:
             smiles.append(block.to_smiles(isomeric=isomeric))
         return smiles
 

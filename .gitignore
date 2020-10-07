@@ -1,3 +1,10 @@
+# for myself
+upload2conda.sh
+upload2pypi.sh
+meta.yaml
+bld.bat
+build.sh
+
 # doc build
 doc/_build
 

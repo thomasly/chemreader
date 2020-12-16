@@ -38,10 +38,14 @@ class CanonicalAtomOrderConverter:
                 order[b.GetBeginAtomIdx()], order[b.GetEndAtomIdx()], b.GetBondType()
             )
         # Add conformer (atom 3D positions)
-        old_conformer = self.mol.GetConformer(0)
-        new_conformer = Chem.Conformer(new_mol.GetNumAtoms())
-        for idx in range(len(order)):
-            pos = old_conformer.GetAtomPosition(order[idx])
-            new_conformer.SetAtomPosition(idx, pos)
-        new_mol.AddConformer(new_conformer)
+        try:
+            old_conformer = self.mol.GetConformer(0)
+        except ValueError:
+            old_conformer = None
+        if old_conformer is not None:
+            new_conformer = Chem.Conformer(new_mol.GetNumAtoms())
+            for idx in range(len(order)):
+                pos = old_conformer.GetAtomPosition(order[idx])
+                new_conformer.SetAtomPosition(idx, pos)
+            new_mol.AddConformer(new_conformer)
         return new_mol

@@ -9,6 +9,7 @@ from rdkit import Chem
 from ..readers import Mol2, Mol2Block
 from ..readers import Smiles
 from ..readers import PDB, PartialPDB, PDBBB
+from ..readers import CanonicalAtomOrderConverter
 from ..readers.readmol import MolReader, MolBlock
 
 
@@ -146,9 +147,9 @@ class TestMol2(TestReadingMol2File):
         can_smiles = self.mol.to_smiles()
         iso_smiles = self.mol.to_smiles(isomeric=True)
         self.assertEqual(len(can_smiles), self.mol.n_mols)
-        self.assertEqual(can_smiles[0], r"C[NH+](C)CCNC(=O)C1:N:O:N:C:1N")
+        self.assertEqual(can_smiles[0], r"C[NH+](C)CCNC(=O)c1nonc1N")
         self.assertEqual(len(iso_smiles), self.mol.n_mols)
-        self.assertEqual(iso_smiles[62], r"CN1:C:N:C:C:1[C@H]([NH3+])C1(O)CNC1")
+        self.assertEqual(iso_smiles[62], r"Cn1cncc1[C@H]([NH3+])C1(O)CNC1")
         self.assertNotEqual(can_smiles[1], iso_smiles[1])
 
     def test_molecular_weights(self):
@@ -442,3 +443,47 @@ class TestReadMol(unittest.TestCase):
         self.assertEqual(atom_features[21][3], "Cl")
         atom_features = block.get_atom_features(numeric=True)
         self.assertEqual(atom_features[21][3], 7)
+
+
+class TestAtomOrderConverter(unittest.TestCase):
+    def setUp(self):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        self.mol1 = Chem.MolFromMol2File(
+            os.path.join(dir_path, "testing_resources", "mol_origin.mol2"),
+            removeHs=False,
+        )
+        self.mol2 = Chem.MolFromMol2File(
+            os.path.join(dir_path, "testing_resources", "mol_diff1.mol2"),
+            removeHs=False,
+        )
+        self.mol3 = Chem.MolFromMol2File(
+            os.path.join(dir_path, "testing_resources", "mol_diff2.mol2"),
+            removeHs=False,
+        )
+
+    def test_output_atom_order_are_the_same(self):
+        conv1 = CanonicalAtomOrderConverter(self.mol1)
+        conv2 = CanonicalAtomOrderConverter(self.mol2)
+        conv3 = CanonicalAtomOrderConverter(self.mol3)
+        new_mol1 = conv1.convert()
+        new_mol2 = conv2.convert()
+        new_mol3 = conv3.convert()
+        conf1 = new_mol1.GetConformer(0)
+        conf2 = new_mol2.GetConformer(0)
+        conf3 = new_mol3.GetConformer(0)
+        for idx in range(new_mol1.GetNumAtoms()):
+            a1, a2, a3 = (
+                new_mol1.GetAtomWithIdx(idx),
+                new_mol2.GetAtomWithIdx(idx),
+                new_mol3.GetAtomWithIdx(idx),
+            )
+            self.assertEqual(a1.GetSymbol(), a2.GetSymbol())
+            self.assertEqual(a1.GetSymbol(), a3.GetSymbol())
+            self.assertEqual(a1.GetIdx(), a2.GetIdx())
+            self.assertEqual(a1.GetIdx(), a3.GetIdx())
+            pos1 = conf1.GetAtomPosition(a1.GetIdx())
+            pos2 = conf2.GetAtomPosition(a2.GetIdx())
+            pos3 = conf3.GetAtomPosition(a3.GetIdx())
+            for coor1, coor2, coor3 in zip(pos1, pos2, pos3):
+                self.assertEqual(coor1, coor2)
+                self.assertEqual(coor1, coor3)

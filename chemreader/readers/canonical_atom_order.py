@@ -24,18 +24,22 @@ class CanonicalAtomOrderConverter:
             RDKit Mol object: An RDKit Mol object with canonical atom order.
         """
         # Creat canonical order dict
-        order = Chem.CanonicalRankAtoms(self.mol, includeChirality=True, breakTies=True)
-        order = {o: i for i, o in enumerate(order)}
+        old2new = Chem.CanonicalRankAtoms(
+            self.mol, includeChirality=True, breakTies=True
+        )
+        new2old = {o: i for i, o in enumerate(old2new)}
         # build new molecule based on the new atom order
         new_mol = Chem.rdchem.RWMol(Chem.Mol())
         # add Atoms
-        for idx in range(len(order)):
-            new_mol.AddAtom(self.mol.GetAtomWithIdx(order[idx]))
+        for idx in range(len(old2new)):
+            new_mol.AddAtom(self.mol.GetAtomWithIdx(new2old[idx]))
         # rebuild Bonds
         bonds = self.mol.GetBonds()
         for b in bonds:
             new_mol.AddBond(
-                order[b.GetBeginAtomIdx()], order[b.GetEndAtomIdx()], b.GetBondType()
+                old2new[b.GetBeginAtomIdx()],
+                old2new[b.GetEndAtomIdx()],
+                b.GetBondType(),
             )
         # Add conformer (atom 3D positions)
         try:
@@ -44,8 +48,8 @@ class CanonicalAtomOrderConverter:
             old_conformer = None
         if old_conformer is not None:
             new_conformer = Chem.Conformer(new_mol.GetNumAtoms())
-            for idx in range(len(order)):
-                pos = old_conformer.GetAtomPosition(order[idx])
+            for idx in range(len(old2new)):
+                pos = old_conformer.GetAtomPosition(new2old[idx])
                 new_conformer.SetAtomPosition(idx, pos)
             new_mol.AddConformer(new_conformer)
         return new_mol

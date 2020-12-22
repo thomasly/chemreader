@@ -489,18 +489,10 @@ class TestAtomOrderConverter(unittest.TestCase):
         conv1 = CanonicalAtomOrderConverter(self.mol1)
         conv2 = CanonicalAtomOrderConverter(self.mol2)
         conv3 = CanonicalAtomOrderConverter(self.mol3)
-        conv4 = CanonicalAtomOrderConverter(self.mol4)
-        conv5 = CanonicalAtomOrderConverter(self.mol5)
-        conv6 = CanonicalAtomOrderConverter(self.mol6)
 
         new_mol1 = conv1.convert()
         new_mol2 = conv2.convert()
         new_mol3 = conv3.convert()
-        new_mol4 = conv4.convert()
-        new_mol5 = conv5.convert()
-        new_mol6 = conv6.convert()
 
         self.assert_mols_equal(new_mol1, new_mol2)
         self.assert_mols_equal(new_mol1, new_mol3)
-        self.assert_mols_equal(new_mol4, new_mol5)
-        self.assert_mols_equal(new_mol4, new_mol6)

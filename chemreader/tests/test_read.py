@@ -389,6 +389,8 @@ class TestReadPDB(unittest.TestCase):
         pdb = PDB(self.fpath)
         feats = pdb.get_atom_features(include_coordinates=True)
         self.assertEqual(len(feats[0]), 9)
+        graph = pdb.to_graph(include_coordinates=True)
+        self.assertEqual(len(graph["atom_features"][0]), 9)
 
     def test_coordinates(self):
         pdb = PDB(self.fpath, sanitize=False)

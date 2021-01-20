@@ -385,6 +385,11 @@ class TestReadPDB(unittest.TestCase):
             graph["atom_features"][-1][:3], tuple(conformer.GetAtomPosition(10))
         )
 
+    def test_coordinates_included_in_atom_features(self):
+        pdb = PDB(self.fpath)
+        feats = pdb.get_atom_features(include_coordinates=True)
+        self.assertEqual(len(feats[0]), 9)
+
     def test_coordinates(self):
         pdb = PDB(self.fpath, sanitize=False)
         counter = 0

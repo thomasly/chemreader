@@ -102,6 +102,65 @@ class PDB(_BaseReader):
             atom_types.append(symbol)
         return atom_types
 
+    def get_atom_features(
+        self, numeric=False, sort_atoms=False, include_coordinates=False, padding=None
+    ):
+        r""" Get the atom features in the block. The feature contains
+        coordinate and atom type for each atom.
+        Args:
+            numeric (bool): if True, return the atom type as a number.
+            sort_atoms (bool): Default is False. If True, sort the atoms by atom type.
+            include_coordinates (bool): Atom features include the coordinates of the 
+                atom. Default is False.
+            padding (None or int): Pad atom feature matrix to a fix length. The number
+                must be larger than the number of atoms in the molecules.
+
+        Returns:
+            list: list of tuples. Features are atom type, atom mass, atom
+                degree, and atom aromatic
+        """
+        features = list()
+        if sort_atoms:
+            atoms = self.sorted_atoms
+        else:
+            atoms = self.rdkit_mol.GetAtoms()
+        if include_coordinates:
+            try:
+                conformer = self.rdkit_mol.GetConformer(0)
+            except IndexError:
+                print("Fail to get the coordinates of the atoms.")
+                raise
+        for i, atom in enumerate(atoms):
+            feature = list()
+            # the features of an atom includes: atom type, degree, formal charge,
+            # hybridization, aromatic, and chirality
+            if include_coordinates:
+                coors = conformer.GetAtomPosition(i)
+                feature.extend([coors.x, coors.y, coors.z])
+            atom_type = self.atom_types[i]
+            if numeric:
+                atom_type = self.atom_to_num(atom_type)
+            feature.append(atom_type)
+            feature.append(atom.GetDegree())
+            # feature.append(atom.GetImplicitValence())
+            feature.append(atom.GetFormalCharge())
+            # feature.append(atom.GetNumRadicalElectrons())
+            feature.append(int(atom.GetHybridization()))
+            feature.append(int(atom.GetIsAromatic()))
+            feature.append(int(atom.GetChiralTag()))
+            features.append(tuple(feature))
+        if padding is not None:
+            if padding < len(features):
+                raise ValueError(
+                    "Padding number should be larger than the feature number."
+                    "Got {} < {}".format(padding, len(features))
+                )
+            pad = (
+                [tuple([self.atom_to_num("unknown")] + [0] * (len(features[0]) - 1))]
+            ) * (padding - len(features))
+            features.extend(pad)
+        return features
+
     def get_adjacency_matrix(self, sparse=False, padding=None):
         r""" Get the adjacency matrix of the molecular graph.
 
@@ -127,10 +186,14 @@ class PDB(_BaseReader):
             matrix = sp.csr_matrix(matrix)
         return matrix
 
-    def to_graph(self, sparse=False, pad_atom=None, pad_bond=None):
+    def to_graph(
+        self, sparse=False, include_coordinates=False, pad_atom=None, pad_bond=None
+    ):
         graph = dict()
         graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse, padding=pad_atom)
-        graph["atom_features"] = self.get_atom_features(numeric=True, padding=pad_atom)
+        graph["atom_features"] = self.get_atom_features(
+            numeric=True, include_coordinates=include_coordinates, padding=pad_atom
+        )
         graph["bond_features"] = self.get_bond_features(numeric=True)
         return graph
 

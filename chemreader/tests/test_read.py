@@ -12,6 +12,7 @@ from ..readers import Smiles
 from ..readers import PDB, PartialPDB, PDBBB
 from ..readers import CanonicalAtomOrderConverter
 from ..readers.readmol import MolReader, MolBlock
+from ..readers.basereader import MolFragmentsLabel
 
 RDLogger.DisableLog('rdApp.*')
 
@@ -356,6 +357,16 @@ class TestReadingSmiles(unittest.TestCase):
     def test_fragment_labels(self):
         atom_features = self.sm.get_atom_features(numeric=True, fragment_label=True)
         self.assertEqual(len(atom_features[0]), 624)
+        graph = self.sm.to_graph(fragment_label=True)
+        self.assertEqual(len(graph["atom_features"][0]), 624)
+        # assert the order of the atom fragment labels are correct
+        atom_features = self.sm.get_atom_features(numeric=True, fragment_label=True, sort_atoms=True)
+        mfl = MolFragmentsLabel()
+        frag_labels = mfl.create_labels_for(self.sm.rdkit_mol, sparse=False)
+        for i, atom in enumerate(self.sm.sorted_atoms):
+            idx = atom.GetIdx()
+            self.assertEqual(atom_features[i][6:], tuple(frag_labels[:, idx].tolist()))
+        # assert padding still work
         atom_features = self.sm.get_atom_features(
             numeric=True, fragment_label=True, padding=70
         )

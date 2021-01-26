@@ -401,13 +401,23 @@ class GraphFromRDKitMol(_BaseReader):
             matrix = sp.csr_matrix(matrix)
         return matrix
 
-    def to_graph(self, sparse=False, sort_atoms=False, pad_atom=None, pad_bond=None):
+    def to_graph(
+        self,
+        sparse=False,
+        sort_atoms=False,
+        fragment_label=False,
+        pad_atom=None,
+        pad_bond=None,
+    ):
         graph = dict()
         graph["adjacency"] = self.get_adjacency_matrix(
-            sparse=sparse, sort_atoms=sort_atoms, padding=pad_atom
+            sparse=sparse, sort_atoms=sort_atoms, padding=pad_atom,
         )
         graph["atom_features"] = self.get_atom_features(
-            numeric=True, sort_atoms=sort_atoms, padding=pad_atom
+            numeric=True,
+            sort_atoms=sort_atoms,
+            fragment_label=fragment_label,
+            padding=pad_atom,
         )
         graph["bond_features"] = self.get_bond_features(
             numeric=True, sort_atoms=sort_atoms

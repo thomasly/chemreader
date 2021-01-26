@@ -27,8 +27,9 @@ class MolFragmentsLabel:
 
     def __init__(self, ref_file=None):
         if ref_file is None:
+            cwd = os.path.dirname(__file__)
             self.ref_file = os.path.join(
-                "resources", "pubchemFPKeys_to_SMARTSpattern.csv"
+                cwd, "..", "..", "resources", "pubchemFPKeys_to_SMARTSpattern.csv"
             )
         else:
             self.ref_file = ref_file

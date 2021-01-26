@@ -5,6 +5,7 @@ import logging
 import numpy as np
 from scipy import sparse as sp
 from rdkit import Chem
+from rdkit import RDLogger
 
 from ..readers import Mol2, Mol2Block
 from ..readers import Smiles
@@ -12,6 +13,7 @@ from ..readers import PDB, PartialPDB, PDBBB
 from ..readers import CanonicalAtomOrderConverter
 from ..readers.readmol import MolReader, MolBlock
 
+RDLogger.DisableLog('rdApp.*')
 
 class TestReadingMol2File(unittest.TestCase):
     def setUp(self):
@@ -177,8 +179,8 @@ class TestMol2(TestReadingMol2File):
 
     def test_atom2int_and_bond2int(self):
         self.assertEqual(Mol2Block.atom_to_num("C"), 0)
-        self.assertEqual(Mol2Block.atom_to_num("Any"), 22)
-        self.assertEqual(Mol2Block.atom_to_num("@#$%"), 22)
+        self.assertEqual(Mol2Block.atom_to_num("Any"), 24)
+        self.assertEqual(Mol2Block.atom_to_num("@#$%"), 24)
         self.assertEqual(Mol2Block.bond_to_num("1"), 0)
         self.assertEqual(Mol2Block.bond_to_num("nc"), 6)
         self.assertEqual(Mol2Block.bond_to_num("@#$%"), 6)
@@ -244,7 +246,7 @@ class TestMol2(TestReadingMol2File):
 class TestReadingSmiles(unittest.TestCase):
     def setUp(self):
         # Aspirin
-        self.smiles = "CC(=O)OC1=CC=CC=C1C(=O)O"
+        self.smiles = "CC(=O)Oc1ccccc1C(=O)O"
         self.sm = Smiles(self.smiles)
 
     def test_building_mol(self):
@@ -278,7 +280,7 @@ class TestReadingSmiles(unittest.TestCase):
         feats = self.sm.get_atom_features(numeric=True, padding=20)
         self.assertEqual(len(feats), 20)
         self.assertEqual(feats[0], (0, 1, 0, 4, 0, 0))
-        self.assertEqual(feats[-1], (22, 0, 0, 0, 0, 0))
+        self.assertEqual(feats[-1], (24, 0, 0, 0, 0, 0))
         with self.assertRaises(ValueError):
             self.sm.get_atom_features(padding=12)
 
@@ -345,11 +347,20 @@ class TestReadingSmiles(unittest.TestCase):
     def test_fingerprints(self):
         fp = self.sm.fingerprint
         self.assertEqual(len(fp), 2048)
-        other = Smiles("C1ccccC1")
+        other = Smiles("c1ccccc1")
         self.assertFalse(self.sm.similar_to(other))
         self.assertTrue(self.sm.similar_to(self.sm))
         fp = Smiles("C1").fingerprint
         self.assertIsNone(fp)
+
+    def test_fragment_labels(self):
+        atom_features = self.sm.get_atom_features(numeric=True, fragment_label=True)
+        self.assertEqual(len(atom_features[0]), 624)
+        atom_features = self.sm.get_atom_features(
+            numeric=True, fragment_label=True, padding=70
+        )
+        self.assertEqual(len(atom_features), 70)
+        self.assertEqual(atom_features[-1], tuple([24] + [0] * 623))
 
 
 class TestReadPDB(unittest.TestCase):

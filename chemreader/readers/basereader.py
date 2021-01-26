@@ -1,13 +1,72 @@
+import os
 from copy import deepcopy
-
 from abc import ABCMeta, abstractmethod, abstractproperty
+
 import numpy as np
+import pandas as pd
+from rdkit import Chem
 from rdkit.Chem.Descriptors import ExactMolWt
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
 from scipy import sparse as sp
 
 from ..utils.tools import property_getter
+
+
+class MolFragmentsLabel:
+    """ Label atoms in a molecule with the fragments they belong to. The fragment
+    library is built from PubChem fingerprint section 3 to section 7. The labels are
+    fingerprint like vectors for each atom of the molecule.
+    
+    Args:
+        ref_file (str): path to the reference file (csv format) that contains the SMARTS
+        strings to match molecular fragments.
+    """
+
+    ref_smarts = None
+
+    def __init__(self, ref_file=None):
+        if ref_file is None:
+            self.ref_file = os.path.join(
+                "resources", "pubchemFPKeys_to_SMARTSpattern.csv"
+            )
+        else:
+            self.ref_file = ref_file
+        if MolFragmentsLabel.ref_smarts is None:
+            self._build_ref(self.ref_file)
+
+    @classmethod
+    def _build_ref(cls, ref_file):
+        df = pd.read_csv(ref_file)
+        cls.ref_smarts = [Chem.MolFromSmarts(smarts) for smarts in df["SMARTS"]]
+
+    def create_labels_for(self, mol, sparse=True):
+        """ Create fragment labels for a molecule:
+        
+        Args:
+            mol (SMILES str or RDKit Mol object): the molecule to create labels for.
+            sparse (bool): return the matrix in sparse format. Default: True.
+        """
+        if isinstance(mol, str):
+            mol = Chem.MolFromSmiles(mol)
+            if mol is None:
+                raise ValueError(f"{mol} is not a valid SMILES string.")
+        # add hydrogens to the molecule
+        mol = Chem.AddHs(mol)
+        # initiate the vectors
+        labels = np.zeros((len(self.ref_smarts), mol.GetNumAtoms()), dtype=np.int)
+        # search for the fragments in the molecule
+        for i, pattern in enumerate(self.ref_smarts):
+            mat_substructs = mol.GetSubstructMatches(pattern)
+            # convert tuple of tuples to a set
+            mat_atoms = set()
+            for atoms in mat_substructs:
+                mat_atoms = mat_atoms.union(set(atoms))
+            mat_atoms = list(mat_atoms)
+            labels[i, mat_atoms] = 1
+        if sparse:
+            labels = sp.coo_matrix(labels)
+        return labels
 
 
 class _BaseReader(metaclass=ABCMeta):
@@ -131,7 +190,9 @@ class _BaseReader(metaclass=ABCMeta):
 
         self._sorted_atoms = sorted(atoms, key=key)
 
-    def get_atom_features(self, numeric=False, sort_atoms=False, padding=None):
+    def get_atom_features(
+        self, numeric=False, sort_atoms=False, fragment_label=False, padding=None
+    ):
         r""" Get the atom features in the block. The feature contains
         coordinate and atom type for each atom.
         Args:
@@ -149,6 +210,9 @@ class _BaseReader(metaclass=ABCMeta):
             atoms = self.sorted_atoms
         else:
             atoms = self.rdkit_mol.GetAtoms()
+        if fragment_label:
+            mfl = MolFragmentsLabel()
+            frag_labels = mfl.create_labels_for(self.rdkit_mol, sparse=False)
         for i, atom in enumerate(atoms):
             feature = list()
             # the features of an atom includes: atom type, degree, formal charge,
@@ -164,6 +228,8 @@ class _BaseReader(metaclass=ABCMeta):
             feature.append(int(atom.GetHybridization()))
             feature.append(int(atom.GetIsAromatic()))
             feature.append(int(atom.GetChiralTag()))
+            if fragment_label:
+                feature.extend(frag_labels[:, atom.GetIdx()].tolist())
             features.append(tuple(feature))
         if padding is not None:
             if padding < len(features):

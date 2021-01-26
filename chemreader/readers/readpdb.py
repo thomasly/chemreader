@@ -127,7 +127,7 @@ class PDB(_BaseReader):
         if include_coordinates:
             try:
                 conformer = self.rdkit_mol.GetConformer(0)
-            except IndexError:
+            except ValueError:
                 print("Fail to get the coordinates of the atoms.")
                 raise
         for i, atom in enumerate(atoms):

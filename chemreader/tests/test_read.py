@@ -445,6 +445,26 @@ class TestReadPDB(unittest.TestCase):
         self.assertEqual(atom_features[-1][:3], [-14.909, -4.100, 8.772])
         self.assertEqual(len(atom_features), adj.shape[0])
         self.assertEqual(len(atom_features[0]), 5)
+        
+    def test_fragment_labels(self):
+        pdb = PDB(self.fpath, sanitize=False)
+        atom_features = pdb.get_atom_features(numeric=True, fragment_label=True)
+        self.assertEqual(len(atom_features[0]), 624)
+        graph = pdb.to_graph(fragment_label=True)
+        self.assertEqual(len(graph["atom_features"][0]), 624)
+        # assert the order of the atom fragment labels are correct
+        atom_features = pdb.get_atom_features(numeric=True, fragment_label=True, sort_atoms=True)
+        mfl = MolFragmentsLabel()
+        frag_labels = mfl.create_labels_for(pdb.rdkit_mol, sparse=False)
+        for i, atom in enumerate(pdb.sorted_atoms):
+            idx = atom.GetIdx()
+            self.assertEqual(atom_features[i][6:], tuple(frag_labels[:, idx].tolist()))
+        # assert padding still work
+        atom_features = pdb.get_atom_features(
+            numeric=True, fragment_label=True, padding=2618
+        )
+        self.assertEqual(len(atom_features), 2618)
+        self.assertEqual(atom_features[-1], tuple([24] + [0] * 623))
 
 
 class TestReadMol(unittest.TestCase):

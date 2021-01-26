@@ -4,7 +4,7 @@ from scipy.spatial.distance import pdist
 from scipy import sparse as sp
 from scipy.linalg import toeplitz
 
-from .basereader import _BaseReader
+from .basereader import _BaseReader, MolFragmentsLabel
 from ..utils.tools import property_getter
 
 
@@ -103,7 +103,12 @@ class PDB(_BaseReader):
         return atom_types
 
     def get_atom_features(
-        self, numeric=False, sort_atoms=False, include_coordinates=False, padding=None
+        self,
+        numeric=False,
+        sort_atoms=False,
+        include_coordinates=False,
+        fragment_label=False,
+        padding=None,
     ):
         r""" Get the atom features in the block. The feature contains
         coordinate and atom type for each atom.
@@ -112,6 +117,8 @@ class PDB(_BaseReader):
             sort_atoms (bool): Default is False. If True, sort the atoms by atom type.
             include_coordinates (bool): Atom features include the coordinates of the 
                 atom. Default is False.
+            fragment_label (bool): Atom features include 618 dimension fragment label
+                originated from PubChem fingerprint.
             padding (None or int): Pad atom feature matrix to a fix length. The number
                 must be larger than the number of atoms in the molecules.
 
@@ -130,6 +137,9 @@ class PDB(_BaseReader):
             except ValueError:
                 print("Fail to get the coordinates of the atoms.")
                 raise
+        if fragment_label:
+            mfl = MolFragmentsLabel()
+            frag_labels = mfl.create_labels_for(self.rdkit_mol, sparse=False)
         for i, atom in enumerate(atoms):
             feature = list()
             # the features of an atom includes: atom type, degree, formal charge,
@@ -148,6 +158,8 @@ class PDB(_BaseReader):
             feature.append(int(atom.GetHybridization()))
             feature.append(int(atom.GetIsAromatic()))
             feature.append(int(atom.GetChiralTag()))
+            if fragment_label:
+                feature.extend(frag_labels[:, atom.GetIdx()].tolist())
             features.append(tuple(feature))
         if padding is not None:
             if padding < len(features):
@@ -187,12 +199,22 @@ class PDB(_BaseReader):
         return matrix
 
     def to_graph(
-        self, sparse=False, include_coordinates=False, pad_atom=None, pad_bond=None
+        self,
+        sparse=False,
+        include_coordinates=False,
+        sort_atoms=False,
+        fragment_label=False,
+        pad_atom=None,
+        pad_bond=None,
     ):
         graph = dict()
         graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse, padding=pad_atom)
         graph["atom_features"] = self.get_atom_features(
-            numeric=True, include_coordinates=include_coordinates, padding=pad_atom
+            numeric=True,
+            include_coordinates=include_coordinates,
+            sort_atoms=sort_atoms,
+            fragment_label=fragment_label,
+            padding=pad_atom,
         )
         graph["bond_features"] = self.get_bond_features(numeric=True)
         return graph

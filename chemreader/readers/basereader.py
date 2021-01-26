@@ -24,6 +24,7 @@ class _BaseReader(metaclass=ABCMeta):
         "Cl",
         "Br",
         "Mg",
+        "Li",
         "Na",
         "Ca",
         "Fe",
@@ -36,6 +37,7 @@ class _BaseReader(metaclass=ABCMeta):
         "H",
         "Cu",
         "Mn",
+        "As",
         "unknown",
     ]
 

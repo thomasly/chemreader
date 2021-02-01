@@ -105,6 +105,8 @@ class _BaseReader(metaclass=ABCMeta):
 
     _bond_types = ["1", "2", "3", "am", "ar", "du", "un"]
     _bond2int = {bond.upper(): idx for idx, bond in enumerate(_bond_types)}
+    # possible formal charges
+    possible_fc = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
 
     @classmethod
     def atom_to_num(cls, atom_type):
@@ -224,7 +226,7 @@ class _BaseReader(metaclass=ABCMeta):
             feature.append(atom_type)
             feature.append(atom.GetDegree())
             # feature.append(atom.GetImplicitValence())
-            feature.append(atom.GetFormalCharge())
+            feature.append(self.possible_fc.index(atom.GetFormalCharge()))
             # feature.append(atom.GetNumRadicalElectrons())
             feature.append(int(atom.GetHybridization()))
             feature.append(int(atom.GetIsAromatic()))

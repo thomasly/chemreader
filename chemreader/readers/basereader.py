@@ -104,7 +104,7 @@ class _BaseReader(metaclass=ABCMeta):
 
     _atom2int = {atom.upper(): idx for idx, atom in enumerate(_avail_atom_types)}
 
-    _bond_types = ["1", "2", "3", "am", "ar", "du", "un"]
+    _bond_types = ["1", "2", "3", "ar", "un"]
     _bond2int = {bond.upper(): idx for idx, bond in enumerate(_bond_types)}
     # possible formal charges
     possible_fc = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]

@@ -14,7 +14,8 @@ from ..readers import CanonicalAtomOrderConverter
 from ..readers.readmol import MolReader, MolBlock
 from ..readers.basereader import MolFragmentsLabel
 
-RDLogger.DisableLog('rdApp.*')
+RDLogger.DisableLog("rdApp.*")
+
 
 class TestReadingMol2File(unittest.TestCase):
     def setUp(self):
@@ -108,7 +109,7 @@ class TestReadingMol2File(unittest.TestCase):
         bond = self.block.bonds[16]
         self.assertEqual(bond["connect"][0], 6)
         self.assertEqual(bond["connect"][1], 7)
-        self.assertEqual(bond["type"], "am")
+        self.assertEqual(bond["type"], "1")
 
 
 class TestBlockMissingInformation(unittest.TestCase):
@@ -183,8 +184,8 @@ class TestMol2(TestReadingMol2File):
         self.assertEqual(Mol2Block.atom_to_num("Any"), 24)
         self.assertEqual(Mol2Block.atom_to_num("@#$%"), 24)
         self.assertEqual(Mol2Block.bond_to_num("1"), 0)
-        self.assertEqual(Mol2Block.bond_to_num("nc"), 6)
-        self.assertEqual(Mol2Block.bond_to_num("@#$%"), 6)
+        self.assertEqual(Mol2Block.bond_to_num("ar"), 3)
+        self.assertEqual(Mol2Block.bond_to_num("@#$%"), 4)
 
     def test_get_atom_features(self):
         atom_features = self.mol.get_atom_features(numeric=False)
@@ -204,11 +205,17 @@ class TestMol2(TestReadingMol2File):
         bond_features = self.mol.get_bond_features(numeric=False)
         self.assertEqual(len(bond_features), self.mol.n_mols)
         self.assertEqual(len(bond_features[0]), self.block.num_bonds * 2)
-        self.assertTrue(isinstance(bond_features[0]["1-2"], str))
+        self.assertIsInstance(bond_features[0]["1-2"], list)
+        self.assertIsInstance(bond_features[0]["1-2"][0], str)
+        self.assertEqual(
+            bond_features[0]["1-2"][1], Chem.rdchem.BondDir.NONE
+        )
         numeric_features = self.mol.get_bond_features(numeric=True)
         self.assertEqual(len(numeric_features), self.mol.n_mols)
         self.assertEqual(len(numeric_features[0]), self.block.num_bonds * 2)
-        self.assertTrue(isinstance(numeric_features[0]["1-2"], int))
+        self.assertIsInstance(numeric_features[0]["1-2"], list)
+        self.assertIsInstance(numeric_features[0]["1-2"][0], int)
+        self.assertIsInstance(numeric_features[0]["1-2"][1], int)
 
     def test_to_graphs(self):
         graphs = self.mol.to_graphs(sparse=False)
@@ -220,10 +227,12 @@ class TestMol2(TestReadingMol2File):
         self.assertEqual(graphs[0]["adjacency"].shape, (28, 28))
         self.assertEqual(len(graphs[0]["atom_features"]), self.block.num_atoms)
         self.assertEqual(len(graphs[0]["atom_features"][0]), 7)
-        self.assertTrue(isinstance(graphs[0]["atom_features"][0][0], float))
-        self.assertTrue(isinstance(graphs[0]["atom_features"][0][-1], int))
+        self.assertIsInstance(graphs[0]["atom_features"][0][0], float)
+        self.assertIsInstance(graphs[0]["atom_features"][0][-1], int)
         self.assertEqual(len(graphs[0]["bond_features"]), self.block.num_bonds * 2)
-        self.assertTrue(isinstance(graphs[0]["bond_features"]["1-2"], int))
+        self.assertIsInstance(graphs[0]["bond_features"]["1-2"], list)
+        self.assertIsInstance(graphs[0]["bond_features"]["1-2"][0], int)
+        self.assertIsInstance(graphs[0]["bond_features"]["1-2"][1], int)
         sparse_graphs = self.mol.to_graphs(sparse=True)
         self.assertEqual(len(sparse_graphs), self.mol.n_mols)
         self.assertTrue(sp.issparse(sparse_graphs[0]["adjacency"]))
@@ -359,7 +368,9 @@ class TestReadingSmiles(unittest.TestCase):
         graph = self.sm.to_graph(fragment_label=True)
         self.assertEqual(len(graph["atom_features"][0]), 624)
         # assert the order of the atom fragment labels are correct
-        atom_features = self.sm.get_atom_features(numeric=True, fragment_label=True, sort_atoms=True)
+        atom_features = self.sm.get_atom_features(
+            numeric=True, fragment_label=True, sort_atoms=True
+        )
         mfl = MolFragmentsLabel()
         frag_labels = mfl.create_labels_for(self.sm.rdkit_mol, sparse=False)
         for i, atom in enumerate(self.sm.sorted_atoms):
@@ -371,7 +382,7 @@ class TestReadingSmiles(unittest.TestCase):
         )
         self.assertEqual(len(atom_features), 70)
         self.assertEqual(atom_features[-1], tuple([24] + [0] * 623))
-        
+
     def test_networkx_graph(self):
         graph = self.sm.to_graph(networkx=True)
         self.assertEqual(graph.graph["n_atomtypes"], 25)
@@ -456,7 +467,7 @@ class TestReadPDB(unittest.TestCase):
         self.assertEqual(atom_features[-1][:3], [-14.909, -4.100, 8.772])
         self.assertEqual(len(atom_features), adj.shape[0])
         self.assertEqual(len(atom_features[0]), 5)
-        
+
     def test_fragment_labels(self):
         pdb = PDB(self.fpath, sanitize=False)
         atom_features = pdb.get_atom_features(numeric=True, fragment_label=True)
@@ -464,7 +475,9 @@ class TestReadPDB(unittest.TestCase):
         graph = pdb.to_graph(fragment_label=True)
         self.assertEqual(len(graph["atom_features"][0]), 624)
         # assert the order of the atom fragment labels are correct
-        atom_features = pdb.get_atom_features(numeric=True, fragment_label=True, sort_atoms=True)
+        atom_features = pdb.get_atom_features(
+            numeric=True, fragment_label=True, sort_atoms=True
+        )
         mfl = MolFragmentsLabel()
         frag_labels = mfl.create_labels_for(pdb.rdkit_mol, sparse=False)
         for i, atom in enumerate(pdb.sorted_atoms):
@@ -476,7 +489,7 @@ class TestReadPDB(unittest.TestCase):
         )
         self.assertEqual(len(atom_features), 2618)
         self.assertEqual(atom_features[-1], tuple([24] + [0] * 623))
-        
+
 
 class TestReadMol(unittest.TestCase):
     def setUp(self):

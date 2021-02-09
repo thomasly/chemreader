@@ -8,7 +8,7 @@ from scipy import sparse as sp
 from tqdm import tqdm
 
 from ..utils.tools import property_getter
-from .basereader import _BaseReader
+from .basereader import GraphFromRDKitMol
 
 
 class Mol2Reader:
@@ -81,21 +81,15 @@ class Mol2Reader:
         return blocks
 
 
-class Mol2Block(_BaseReader):
+class Mol2Block(GraphFromRDKitMol):
     def __init__(self, block):
         r"""
         block (str): a mol2 format string of molecule block starting with
             @<TRIPOS>MOLECULE
         """
         self.block_str = block
-
-    @property
-    @property_getter
-    def rdkit_mol(self):
-        return self._rdkit_mol
-
-    def _get_rdkit_mol(self):
-        return Chem.MolFromMol2Block(self.block_str, sanitize=False)
+        mol = Chem.MolFromMol2Block(self.block_str, sanitize=False)
+        super().__init__(mol)
 
     def _parse(self, block):
         r""" Parse the block content and dump the records into a dict
@@ -136,24 +130,6 @@ class Mol2Block(_BaseReader):
 
     def _get_mol_name(self):
         return self.block["MOLECULE"][0]
-
-    @property
-    @property_getter
-    def num_atoms(self):
-        r""" Number of atoms in the molecule
-        """
-        return self._num_atoms
-
-    def _get_num_atoms(self):
-        return self.rdkit_mol.GetNumAtoms()
-
-    @property
-    @property_getter
-    def num_bonds(self):
-        return self._num_bonds
-
-    def _get_num_bonds(self):
-        return self.rdkit_mol.GetNumBonds()
 
     @property
     @property_getter
@@ -212,15 +188,6 @@ class Mol2Block(_BaseReader):
 
     @property
     @property_getter
-    def atom_names(self):
-        return self._atom_names
-
-    def _get_atom_names(self):
-        atoms = self.rdkit_mol.GetAtoms()
-        return [atom.GetSymbol() for atom in atoms]
-
-    @property
-    @property_getter
     def coordinates(self):
         return self._coordinates
 
@@ -256,24 +223,6 @@ class Mol2Block(_BaseReader):
                     "{} does not have charge " "information.".format(self.mol_name)
                 )
         return charges
-
-    @property
-    @property_getter
-    def bonds(self):
-        return self._bonds
-
-    def _get_bonds(self):
-        bonds = list()
-        for bond in self.block["BOND"]:
-            b = dict()
-            tokens = bond.split()
-            start = int(tokens[1]) - 1
-            end = int(tokens[2]) - 1
-            type_ = tokens[3]
-            b["connect"] = tuple([start, end])
-            b["type"] = type_
-            bonds.append(b)
-        return bonds
 
     @property
     @property_getter

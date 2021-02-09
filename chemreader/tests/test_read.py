@@ -246,8 +246,7 @@ class TestMol2(TestReadingMol2File):
 
 class TestReadingSmiles(unittest.TestCase):
     def setUp(self):
-        # Aspirin
-        self.smiles = "CC(=O)Oc1ccccc1C(=O)O"
+        self.smiles = "CC(=O)Oc1ccccc1C(=O)O"  # Aspirin
         self.sm = Smiles(self.smiles)
 
     def test_building_mol(self):
@@ -273,14 +272,14 @@ class TestReadingSmiles(unittest.TestCase):
     def test_atom_featurs(self):
         feats = self.sm.get_atom_features()
         self.assertEqual(len(feats), 13)
-        self.assertEqual(feats[0], ("C", 1, 0, 4, 0, 0))
-        self.assertEqual(feats[4], ("C", 3, 0, 3, 1, 0))
+        self.assertEqual(feats[0], ("C", 1, 5, 4, 0, 0))
+        self.assertEqual(feats[4], ("C", 3, 5, 3, 1, 0))
         feats = self.sm.get_atom_features(numeric=True)
         self.assertEqual(len(feats), 13)
-        self.assertEqual(feats[0], (0, 1, 0, 4, 0, 0))
+        self.assertEqual(feats[0], (0, 1, 5, 4, 0, 0))
         feats = self.sm.get_atom_features(numeric=True, padding=20)
         self.assertEqual(len(feats), 20)
-        self.assertEqual(feats[0], (0, 1, 0, 4, 0, 0))
+        self.assertEqual(feats[0], (0, 1, 5, 4, 0, 0))
         self.assertEqual(feats[-1], (24, 0, 0, 0, 0, 0))
         with self.assertRaises(ValueError):
             self.sm.get_atom_features(padding=12)
@@ -311,10 +310,10 @@ class TestReadingSmiles(unittest.TestCase):
     def test_bond_features(self):
         feats = self.sm.get_bond_features()
         self.assertEqual(len(feats), 26)
-        self.assertEqual(feats["0-1"], "1")
+        self.assertEqual(feats["0-1"][0], "1")
         feats = self.sm.get_bond_features(numeric=True)
         self.assertEqual(len(feats), 26)
-        self.assertEqual(feats["0-1"], 0)
+        self.assertEqual(feats["0-1"][0], 0)
         # feats = self.sm.get_bond_features(numeric=True, padding=15)
         # self.assertEqual(len(feats), 15)
         # self.assertEqual(feats[0], 0)
@@ -325,12 +324,12 @@ class TestReadingSmiles(unittest.TestCase):
     def test_sorted_bond_features(self):
         feats = self.sm.get_bond_features(sort_atoms=True)
         self.assertEqual(len(feats), 26)
-        self.assertEqual(feats["0-5"], "1")
+        self.assertEqual(feats["0-5"][0], "1")
         with self.assertRaises(KeyError):
             feats["0-1"]
         unsorted_feats = self.sm.get_bond_features(sort_atoms=False)
         self.assertEqual(len(unsorted_feats), 26)
-        self.assertEqual(unsorted_feats["0-1"], "1")
+        self.assertEqual(unsorted_feats["0-1"][0], "1")
 
     def test_graph(self):
         graph = self.sm.to_graph()
@@ -372,6 +371,18 @@ class TestReadingSmiles(unittest.TestCase):
         )
         self.assertEqual(len(atom_features), 70)
         self.assertEqual(atom_features[-1], tuple([24] + [0] * 623))
+        
+    def test_networkx_graph(self):
+        graph = self.sm.to_graph(networkx=True)
+        self.assertEqual(graph.graph["n_atomtypes"], 25)
+        self.assertEqual(graph.nodes[0]["atomtype"], 0)
+        self.assertEqual(graph.nodes[0]["formalcharge"], 5)
+        self.assertEqual(graph.nodes[0]["degree"], 1)
+        self.assertEqual(graph.nodes[0]["hybridization"], 4)
+        self.assertEqual(graph.nodes[0]["aromatic"], 0)
+        self.assertEqual(graph.nodes[0]["chirality"], 0)
+        self.assertEqual(graph.edges[0, 1]["bondtype"], 0)
+        self.assertEqual(graph.edges[0, 1]["bonddir"], 0)
 
 
 class TestReadPDB(unittest.TestCase):
@@ -465,7 +476,7 @@ class TestReadPDB(unittest.TestCase):
         )
         self.assertEqual(len(atom_features), 2618)
         self.assertEqual(atom_features[-1], tuple([24] + [0] * 623))
-
+        
 
 class TestReadMol(unittest.TestCase):
     def setUp(self):

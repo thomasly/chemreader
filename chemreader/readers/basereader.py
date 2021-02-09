@@ -9,6 +9,7 @@ from rdkit.Chem.Descriptors import ExactMolWt
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
 from scipy import sparse as sp
+import networkx as nx
 
 from ..utils.tools import property_getter
 
@@ -107,6 +108,11 @@ class _BaseReader(metaclass=ABCMeta):
     _bond2int = {bond.upper(): idx for idx, bond in enumerate(_bond_types)}
     # possible formal charges
     possible_fc = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+    possible_bond_dirs = [
+        Chem.rdchem.BondDir.NONE,
+        Chem.rdchem.BondDir.ENDUPRIGHT,
+        Chem.rdchem.BondDir.ENDDOWNRIGHT,
+    ]
 
     @classmethod
     def atom_to_num(cls, atom_type):
@@ -252,7 +258,7 @@ class _BaseReader(metaclass=ABCMeta):
             unsorted_bonds (list): list of bonds in chemical compound.
 
         Returns:
-            dict: Bond feature dict.
+            list: Sorted bonds.
         """
         new_idx = {old.GetIdx(): new for new, old in enumerate(self.sorted_atoms)}
         sorted_bonds = list()
@@ -278,18 +284,46 @@ class _BaseReader(metaclass=ABCMeta):
             bonds = self.bonds
         for bond in bonds:
             type_ = bond["type"]
+            dir_ = bond["dir"]
             conn = str(bond["connect"][0]) + "-" + str(bond["connect"][1])
             conn2 = str(bond["connect"][1]) + "-" + str(bond["connect"][0])
             if numeric:
                 type_ = self.bond_to_num(type_)
-            features[conn] = type_
-            features[conn2] = type_
+                dir_ = self.possible_bond_dirs.index(dir_)
+            features[conn] = [type_, dir_]
+            features[conn2] = [type_, dir_]
         return features
 
     @abstractmethod
     def to_graph(self):
         """ Convert molecule to graph
         """
+        
+    def graph_to_nx(self, graph):
+        G = nx.Graph()
+        G.graph["n_atomtypes"] = len(self._avail_atom_types)
+        G.graph["n_formalcharges"] = 11
+        G.graph["n_degrees"] = 11
+        G.graph["n_chiralitytypes"] = 4
+        G.graph["n_aromatictypes"] = 2
+        G.graph["n_hybridizationtypes"] = 7
+        
+        for i, feat in enumerate(graph["atom_features"]):
+            G.add_node(
+                i,
+                atomtype=feat[0],
+                degree=feat[1],
+                formalcharge=feat[2],
+                hybridization=feat[3],
+                aromatic=feat[4],
+                chirality=feat[5]
+            )
+        adj = sp.coo_matrix(graph["adjacency"])
+        for i, j in zip(adj.row, adj.col):
+            bond_features = graph["bond_features"][f"{i}-{j}"]
+            G.add_edge(i, j, bondtype=bond_features[0], bonddir=bond_features[1])
+            
+        return G
 
 
 class GraphFromRDKitMol(_BaseReader):
@@ -369,6 +403,7 @@ class GraphFromRDKitMol(_BaseReader):
                 type_ = str(int(bond.GetBondType()))
             b["connect"] = tuple([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
             b["type"] = type_
+            b["dir"] = bond.GetBondDir()
             bonds.append(b)
         return bonds
 
@@ -403,7 +438,7 @@ class GraphFromRDKitMol(_BaseReader):
         if sparse:
             matrix = sp.csr_matrix(matrix)
         return matrix
-
+            
     def to_graph(
         self,
         sparse=False,
@@ -411,6 +446,7 @@ class GraphFromRDKitMol(_BaseReader):
         fragment_label=False,
         pad_atom=None,
         pad_bond=None,
+        networkx=False,
     ):
         graph = dict()
         graph["adjacency"] = self.get_adjacency_matrix(
@@ -425,6 +461,8 @@ class GraphFromRDKitMol(_BaseReader):
         graph["bond_features"] = self.get_bond_features(
             numeric=True, sort_atoms=sort_atoms
         )
+        if networkx:
+            graph = self.graph_to_nx(graph)
         return graph
 
     def similar_to(self, other, threshold=0.5):

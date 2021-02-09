@@ -4,11 +4,11 @@ from scipy.spatial.distance import pdist
 from scipy import sparse as sp
 from scipy.linalg import toeplitz
 
-from .basereader import _BaseReader, MolFragmentsLabel
+from .basereader import GraphFromRDKitMol, MolFragmentsLabel
 from ..utils.tools import property_getter
 
 
-class PDB(_BaseReader):
+class PDB(GraphFromRDKitMol):
     """ Read PDB file and convert to graph.
     """
 
@@ -42,65 +42,13 @@ class PDB(_BaseReader):
         """
         self._fpath = fpath
         self._sanitize = sanitize
+        mol = MolFromPDBFile(fpath, sanitize=sanitize)
+        super().__init__(mol)
 
     @classmethod
     def from_pdb_block(cls, block, sanitize=True):
         inst = cls(fpath=None, sanitize=sanitize)
-        inst._rdkit_mol = MolFromPDBBlock(block)
         return inst
-
-    @property
-    @property_getter
-    def num_atoms(self):
-        """ Number of atoms
-        """
-        return self._num_atoms
-
-    def _get_num_atoms(self):
-        return self.rdkit_mol.GetNumAtoms()
-
-    @property
-    @property_getter
-    def bonds(self):
-        """ Bonds
-        """
-        return self._bonds
-
-    def _get_bonds(self):
-        bonds = list()
-        for bond in self.rdkit_mol.GetBonds():
-            b = dict()
-            if bond.GetIsAromatic():
-                type_ = "ar"
-            else:
-                type_ = str(int(bond.GetBondType()))
-            b["connect"] = tuple([bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()])
-            b["type"] = type_
-            bonds.append(b)
-        return bonds
-
-    @property
-    @property_getter
-    def rdkit_mol(self):
-        """ RDKit Mol object
-        """
-        return self._rdkit_mol
-
-    def _get_rdkit_mol(self):
-        self._rdkit_mol = MolFromPDBFile(self._fpath, sanitize=self._sanitize)
-        return self._rdkit_mol
-
-    @property
-    @property_getter
-    def atom_types(self):
-        return self._atom_types
-
-    def _get_atom_types(self):
-        atom_types = list()
-        for atom in self.rdkit_mol.GetAtoms():
-            symbol = atom.GetSymbol().upper()
-            atom_types.append(symbol)
-        return atom_types
 
     def get_atom_features(
         self,

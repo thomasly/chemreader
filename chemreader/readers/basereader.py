@@ -447,7 +447,9 @@ class GraphFromRDKitMol(_BaseReader):
         pad_atom=None,
         pad_bond=None,
         networkx=False,
+        pyg=False,
     ):
+        assert not all(networkx, pyg), "networkx and pyg can't both be True."
         graph = dict()
         graph["adjacency"] = self.get_adjacency_matrix(
             sparse=sparse, sort_atoms=sort_atoms, padding=pad_atom,
@@ -463,6 +465,8 @@ class GraphFromRDKitMol(_BaseReader):
         )
         if networkx:
             graph = self.graph_to_nx(graph)
+        if pyg:
+            graph = self.graph_to_pyg(graph)
         return graph
 
     def similar_to(self, other, threshold=0.5):

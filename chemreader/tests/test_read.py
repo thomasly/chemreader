@@ -207,9 +207,7 @@ class TestMol2(TestReadingMol2File):
         self.assertEqual(len(bond_features[0]), self.block.num_bonds * 2)
         self.assertIsInstance(bond_features[0]["1-2"], list)
         self.assertIsInstance(bond_features[0]["1-2"][0], str)
-        self.assertEqual(
-            bond_features[0]["1-2"][1], Chem.rdchem.BondDir.NONE
-        )
+        self.assertEqual(bond_features[0]["1-2"][1], Chem.rdchem.BondDir.NONE)
         numeric_features = self.mol.get_bond_features(numeric=True)
         self.assertEqual(len(numeric_features), self.mol.n_mols)
         self.assertEqual(len(numeric_features[0]), self.block.num_bonds * 2)
@@ -395,6 +393,27 @@ class TestReadingSmiles(unittest.TestCase):
         self.assertEqual(graph.edges[0, 1]["bondtype"], 0)
         self.assertEqual(graph.edges[0, 1]["bonddir"], 0)
 
+    def test_pyg_graph(self):
+        try:
+            import torch
+            import torch_geometric as pyg
+
+            torch_avail = True
+        except ImportError:
+            torch_avail = False
+
+        if torch_avail:
+            with self.assertRaises(AssertionError):
+                self.sm.to_graph(networkx=True, pyg=True)
+            graph = self.sm.to_graph(pyg=True)
+            self.assertIsInstance(graph, pyg.data.Data)
+            self.assertTrue(hasattr(graph, "x"))
+            self.assertTrue(hasattr(graph, "edge_idx"))
+            self.assertTrue(hasattr(graph, "edge_attr"))
+            self.assertIsInstance(graph["edge_idx"], torch.Tensor)
+            self.assertIsInstance(graph["edge_attr"], torch.Tensor)
+            self.assertEqual(graph["edge_idx"].size(1), graph["edge_attr"].size(0))
+
 
 class TestReadPDB(unittest.TestCase):
     def setUp(self):
@@ -489,6 +508,41 @@ class TestReadPDB(unittest.TestCase):
         )
         self.assertEqual(len(atom_features), 2618)
         self.assertEqual(atom_features[-1], tuple([24] + [0] * 623))
+
+    def test_networkx_graph(self):
+        pdb = PDB(self.fpath, sanitize=False)
+        graph = pdb.to_graph(networkx=True)
+        self.assertEqual(graph.graph["n_atomtypes"], 25)
+        self.assertEqual(graph.nodes[0]["atomtype"], 1)
+        self.assertEqual(graph.nodes[0]["formalcharge"], 0)
+        self.assertEqual(graph.nodes[0]["degree"], 1)
+        self.assertEqual(graph.nodes[0]["hybridization"], 0)
+        self.assertEqual(graph.nodes[0]["aromatic"], 0)
+        self.assertEqual(graph.nodes[0]["chirality"], 0)
+        self.assertEqual(graph.edges[0, 1]["bondtype"], 0)
+        self.assertEqual(graph.edges[0, 1]["bonddir"], 0)
+
+    def test_pyg_graph(self):
+        try:
+            import torch
+            import torch_geometric as pyg
+
+            torch_avail = True
+        except ImportError:
+            torch_avail = False
+
+        if torch_avail:
+            pdb = PDB(self.fpath, sanitize=False)
+            with self.assertRaises(AssertionError):
+                pdb.to_graph(networkx=True, pyg=True)
+            graph = pdb.to_graph(include_coordinates=True, pyg=True)
+            self.assertIsInstance(graph, pyg.data.Data)
+            self.assertTrue(hasattr(graph, "x"))
+            self.assertTrue(hasattr(graph, "edge_idx"))
+            self.assertTrue(hasattr(graph, "edge_attr"))
+            self.assertIsInstance(graph["edge_idx"], torch.Tensor)
+            self.assertIsInstance(graph["edge_attr"], torch.Tensor)
+            self.assertEqual(graph["edge_idx"].size(1), graph["edge_attr"].size(0))
 
 
 class TestReadMol(unittest.TestCase):

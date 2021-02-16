@@ -18,7 +18,7 @@ class MolFragmentsLabel:
     """ Label atoms in a molecule with the fragments they belong to. The fragment
     library is built from PubChem fingerprint section 3 to section 7. The labels are
     fingerprint like vectors for each atom of the molecule.
-    
+
     Args:
         ref_file (str): path to the reference file (csv format) that contains the SMARTS
         strings to match molecular fragments.
@@ -44,7 +44,7 @@ class MolFragmentsLabel:
 
     def create_labels_for(self, mol, sparse=True):
         """ Create fragment labels for a molecule:
-        
+
         Args:
             mol (SMILES str or RDKit Mol object): the molecule to create labels for.
             sparse (bool): return the matrix in sparse format. Default: True.
@@ -298,7 +298,7 @@ class _BaseReader(metaclass=ABCMeta):
     def to_graph(self):
         """ Convert molecule to graph
         """
-        
+
     def graph_to_nx(self, graph):
         G = nx.Graph()
         G.graph["n_atomtypes"] = len(self._avail_atom_types)
@@ -307,7 +307,7 @@ class _BaseReader(metaclass=ABCMeta):
         G.graph["n_chiralitytypes"] = 4
         G.graph["n_aromatictypes"] = 2
         G.graph["n_hybridizationtypes"] = 7
-        
+
         for i, feat in enumerate(graph["atom_features"]):
             G.add_node(
                 i,
@@ -316,14 +316,28 @@ class _BaseReader(metaclass=ABCMeta):
                 formalcharge=feat[2],
                 hybridization=feat[3],
                 aromatic=feat[4],
-                chirality=feat[5]
+                chirality=feat[5],
             )
         adj = sp.coo_matrix(graph["adjacency"])
         for i, j in zip(adj.row, adj.col):
             bond_features = graph["bond_features"][f"{i}-{j}"]
             G.add_edge(i, j, bondtype=bond_features[0], bonddir=bond_features[1])
-            
+
         return G
+
+    def graph_to_pyg(self, graph):
+        import torch
+        from torch_geometric.data import Data
+
+        x = torch.tensor(graph["atom_features"], dtype=torch.float)
+        edge_idx = graph["adjacency"].tocoo()
+        edge_attr = list()
+        for i, j in zip(edge_idx.row, edge_idx.col):
+            edge_attr.append(graph["bond_features"][f"{i}-{j}"])
+        edge_attr = torch.tensor(edge_attr, dtype=torch.float)
+        edge_idx = torch.tensor([edge_idx.row, edge_idx.col], dtype=torch.long)
+        data = Data(x=x, edge_idx=edge_idx, edge_attr=edge_attr)
+        return data
 
 
 class GraphFromRDKitMol(_BaseReader):
@@ -438,7 +452,7 @@ class GraphFromRDKitMol(_BaseReader):
         if sparse:
             matrix = sp.csr_matrix(matrix)
         return matrix
-            
+
     def to_graph(
         self,
         sparse=False,
@@ -449,8 +463,11 @@ class GraphFromRDKitMol(_BaseReader):
         networkx=False,
         pyg=False,
     ):
-        assert not all(networkx, pyg), "networkx and pyg can't both be True."
+        assert not all([networkx, pyg]), "networkx and pyg can't both be True."
         graph = dict()
+        # graph adjacency matrix must be sparse if pyg is True
+        if pyg:
+            sparse = True
         graph["adjacency"] = self.get_adjacency_matrix(
             sparse=sparse, sort_atoms=sort_atoms, padding=pad_atom,
         )

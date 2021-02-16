@@ -152,10 +152,16 @@ class PDB(GraphFromRDKitMol):
         include_coordinates=False,
         sort_atoms=False,
         fragment_label=False,
+        networkx=False,
+        pyg=False,
         pad_atom=None,
         pad_bond=None,
     ):
+        assert not all([networkx, pyg]), "networkx and pyg can't both be True."
         graph = dict()
+        # graph adjacency matrix must be sparse if pyg is True
+        if pyg:
+            sparse = True
         graph["adjacency"] = self.get_adjacency_matrix(sparse=sparse, padding=pad_atom)
         graph["atom_features"] = self.get_atom_features(
             numeric=True,
@@ -165,6 +171,11 @@ class PDB(GraphFromRDKitMol):
             padding=pad_atom,
         )
         graph["bond_features"] = self.get_bond_features(numeric=True)
+        if networkx:
+            graph = self.graph_to_nx(graph)
+        if pyg:
+            graph = self.graph_to_pyg(graph)
+        return graph
         return graph
 
     def _is_atom(self, pdb_line):

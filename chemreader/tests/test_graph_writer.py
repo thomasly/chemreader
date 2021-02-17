@@ -15,6 +15,7 @@ class TestGraphWriting(TestCase):
     def tearDown(self):
         # remove created files
         shutil.rmtree(self.outpath)
+        # pass
 
     def test_generating_graphs_from_smiles(self):
         smiles = [
@@ -87,9 +88,10 @@ class TestGraphWriting(TestCase):
             counter = 0
             while counter < ne:
                 at, ad = attrs[t_edges + counter], adj[t_edges + counter]
+                at = [int(a) for a in at.split(",")]
                 key = "-".join(map(lambda x: str(int(x) - 1 - t_nodes), ad.split(",")))
                 ea = tattr[key]
-                self.assertEqual(ea, int(at))
+                self.assertEqual(ea, at)
                 counter += 1
             t_nodes += nn
             t_edges += ne
@@ -162,9 +164,10 @@ class TestGraphWriting(TestCase):
             counter = 0
             while counter < ne:
                 at, ad = attrs[t_edges + counter], adj[t_edges + counter]
+                at = [int(a) for a in at.split(",")]
                 key = "-".join(map(lambda x: str(int(x) - 1 - t_nodes), ad.split(",")))
                 ea = tattr[key]
-                self.assertEqual(ea, int(at))
+                self.assertEqual(ea, at)
                 counter += 1
             t_nodes += nn
             t_edges += ne

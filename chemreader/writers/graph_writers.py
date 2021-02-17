@@ -50,7 +50,7 @@ class GraphWriter(_BaseWriter):
                 if edge_features:
                     # write bond features
                     bond = str(origin) + "-" + str(target)
-                    writable_bond_feat = str(bond_feat[bond]) + "\n"
+                    writable_bond_feat = str(bond_feat[bond])[1:-1] + "\n"
                     edge_attr.write(writable_bond_feat)
                 origin = origin + 1 + node_starting_index
                 target = target + 1 + node_starting_index
